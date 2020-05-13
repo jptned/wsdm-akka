@@ -26,11 +26,6 @@ object WebServer {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }
       },
-      pathPrefix("users" / "delete" / LongNumber) { id =>
-        post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
-        }
-      },
       pathPrefix("users" / "get" / LongNumber) { id =>
         get {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"userId\":\""+ id +"\",\"credit\":\"10\"}"))
