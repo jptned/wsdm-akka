@@ -16,7 +16,7 @@ trait Userservice {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"user_id\":\"1\"}"))
         }
       },
-      pathPrefix("users" / "delete" / LongNumber) { id =>
+      pathPrefix("users" / "remove" / LongNumber) { id =>
         delete {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }

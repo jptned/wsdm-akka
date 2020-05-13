@@ -21,7 +21,7 @@ class UserserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest 
     "return status when deleting user" in {
       val postRequest = HttpRequest(
         HttpMethods.DELETE,
-        uri = "/users/delete/5",
+        uri = "/users/remove/5",
       )
       postRequest ~> userRoutes ~> check {
         status.isSuccess() shouldEqual true
