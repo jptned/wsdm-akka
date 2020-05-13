@@ -13,7 +13,7 @@ trait Userservice {
     concat(
       path("users" / "create") {
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"id\":\"1\"}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"user_id\":\"1\"}"))
         }
       },
       pathPrefix("users" / "delete" / LongNumber) { id =>
@@ -23,17 +23,17 @@ trait Userservice {
       },
       pathPrefix("users" / "get" / LongNumber) { id =>
         get {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"userId\":\"" + id + "\",\"credit\":\"10\"}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"user_id\":\"" + id + "\",\"credit\":\"10\"}"))
         }
       },
       pathPrefix("users" / "credit" / "subtract" / LongNumber / LongNumber) { (id, amount) =>
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"userId\":\"" + id + "\",\"credit\":\"" + (100 - amount) + "\"}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"user_id\":\"" + id + "\",\"credit\":\"" + (100 - amount) + "\"}"))
         }
       },
       pathPrefix("users" / "credit" / "add" / LongNumber / LongNumber) { (id, amount) =>
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"userId\":\"" + id + "\",\"credit\":\"" + (100 + amount) + "\"}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"user_id\":\"" + id + "\",\"credit\":\"" + (100 + amount) + "\"}"))
         }
       },
     )
