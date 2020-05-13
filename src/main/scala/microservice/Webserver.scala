@@ -19,10 +19,34 @@ object WebServer {
     val route = concat(
       path("users" / "create") {
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "1"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{id:1}"))
         }
       },
-
+      pathPrefix("users" / "delete" / LongNumber) { id =>
+        delete {
+          complete(HttpEntity(ContentTypes.`application/json`, "{success:true}"))
+        }
+      },
+      pathPrefix("users" / "delete" / LongNumber) { id =>
+        post {
+          complete(HttpEntity(ContentTypes.`application/json`, "{success:true}"))
+        }
+      },
+      pathPrefix("users" / "get" / LongNumber) { id =>
+        get {
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"userId\":\""+ id +"\",\"credit\":\"10\"}"))
+        }
+      },
+      pathPrefix("users" / "credit" / "subtract" / LongNumber / LongNumber) { (id, amount) =>
+        get {
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"userId\":\""+ id +"\",\"credit\":\""+ (100 - amount) +"\"}"))
+        }
+      },
+      pathPrefix("users" / "credit" / "add" / LongNumber / LongNumber) { (id, amount) =>
+        get {
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"userId\":\""+ id +"\",\"credit\":\""+ (100 + amount) +"\"}"))
+        }
+      },
     )
     val bindingFuture = Http().bindAndHandle(route, "localhost", 8080)
 
