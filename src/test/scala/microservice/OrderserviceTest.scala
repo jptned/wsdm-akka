@@ -10,7 +10,7 @@ class OrderserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
     "return id when creating order" in {
       val postRequest = HttpRequest(
         HttpMethods.POST,
-        uri = "/orders/create",
+        uri = "/orders/create/2",
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true
@@ -50,7 +50,7 @@ class OrderserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
     "return status when deleting item" in {
       val postRequest = HttpRequest(
         HttpMethods.DELETE,
-        uri = "/orders/deleteItem/5/5",
+        uri = "/orders/removeItem/5/5",
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true

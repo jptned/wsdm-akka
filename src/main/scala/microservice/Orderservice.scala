@@ -10,7 +10,7 @@ trait Orderservice {
 
   val orderRoutes: Route =
     concat(
-      path("orders" / "create") {
+      path("orders" / "create"/  LongNumber) { userId =>
         post {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"order_id\":\"1\"}"))
         }
@@ -30,7 +30,7 @@ trait Orderservice {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }
       },
-      pathPrefix("orders" / "deleteItem" / LongNumber / LongNumber) { (orderId, itemId) =>
+      pathPrefix("orders" / "removeItem" / LongNumber / LongNumber) { (orderId, itemId) =>
         delete {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }
