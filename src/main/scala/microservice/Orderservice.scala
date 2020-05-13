@@ -12,7 +12,7 @@ trait Orderservice {
     concat(
       path("orders" / "create") {
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"id\":\"1\"}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"order_id\":\"1\"}"))
         }
       },
       pathPrefix("orders" / "remove" / LongNumber) { orderId =>
@@ -22,7 +22,7 @@ trait Orderservice {
       },
       pathPrefix("orders" / "find" / LongNumber) { orderId =>
         get {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"order_id\":\"" + orderId + "\",\"paid\":\"true\",\"items\":{\"4\",\"2\"},\"user\":\"6\",\"total_cost\":\"100\"}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"order_id\":\"" + orderId + "\",\"paid\":\"true\",\"items\":[],\"user\":\"6\",\"total_cost\":\"100\"}"))
         }
       },
       pathPrefix("orders" / "addItem" / LongNumber / LongNumber) { (orderId, itemId) =>
@@ -36,7 +36,7 @@ trait Orderservice {
         }
       },
       pathPrefix("orders" / "checkout" / LongNumber) { (orderId) =>
-        get {
+        post {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }
       },

@@ -25,9 +25,9 @@ trait Stockservice {
           complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }
       },
-      path("stock" / "item" / "create") {
+      path("stock" / "item" / "create" / LongNumber) { price =>
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"id\":\"1\"}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"item_id\":\"1\"}"))
         }
       },
     )
