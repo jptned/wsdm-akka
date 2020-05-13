@@ -12,24 +12,23 @@ object WebServer {
   def main(args: Array[String]) {
 
     implicit val system = ActorSystem("my-system")
-    implicit val materializer = ActorMaterializer()
     // needed for the future flatMap/onComplete in the end
     implicit val executionContext = system.dispatcher
 
     val route = concat(
       path("users" / "create") {
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{id:1}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"id\":\"1\"}"))
         }
       },
       pathPrefix("users" / "delete" / LongNumber) { id =>
         delete {
-          complete(HttpEntity(ContentTypes.`application/json`, "{success:true}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }
       },
       pathPrefix("users" / "delete" / LongNumber) { id =>
         post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{success:true}"))
+          complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
         }
       },
       pathPrefix("users" / "get" / LongNumber) { id =>
