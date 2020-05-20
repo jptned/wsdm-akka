@@ -14,7 +14,7 @@ class StockserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> stockRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"stock\":\"[\\d]+\",\"price\":\"[\\d]+\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"stock\":[\\d]+,\"price\":[\\d]+\\}$"
       }
     }
     "return result when subtracting" in {
@@ -24,7 +24,7 @@ class StockserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> stockRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return result when adding" in {
@@ -34,7 +34,7 @@ class StockserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> stockRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return status when creating" in {
@@ -44,7 +44,7 @@ class StockserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> stockRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"item_id\":\"[\\d]+\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"item_id\":[\\d]+\\}$"
       }
     }
   }

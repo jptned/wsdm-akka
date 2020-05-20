@@ -14,7 +14,7 @@ class PaymentserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTe
       )
       postRequest ~> paymentRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return result when cancelling" in {
@@ -24,7 +24,7 @@ class PaymentserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTe
       )
       postRequest ~> paymentRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return status when requesting" in {
@@ -34,7 +34,7 @@ class PaymentserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTe
       )
       postRequest ~> paymentRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"paid\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"paid\":(true|false)\\}$"
       }
     }
   }

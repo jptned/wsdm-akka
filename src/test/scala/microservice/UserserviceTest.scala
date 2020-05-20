@@ -15,7 +15,7 @@ class UserserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest 
       )
       postRequest ~> userRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"user_id\":\"[\\d]+\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"user_id\":[\\d]+\\}$"
       }
     }
     "return status when deleting user" in {
@@ -25,7 +25,7 @@ class UserserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest 
       )
       postRequest ~> userRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return a user when getting user" in {
@@ -35,7 +35,7 @@ class UserserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest 
       )
       postRequest ~> userRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"user_id\":\"[\\d]+\"\\,\"credit\":\"[\\d]+\"}$"
+        responseAs[String] should fullyMatch regex "^\\{\"user_id\":[\\d]+\\,\"credit\":[\\d]+\\}$"
       }
     }
     "return success when credit subtracted" in {
@@ -45,7 +45,7 @@ class UserserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest 
       )
       postRequest ~> userRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"user_id\":\"[\\d]+\"\\,\"credit\":\"[\\d]+\"}$"
+        responseAs[String] should fullyMatch regex "^\\{\"user_id\":[\\d]+\\,\"credit\":[\\d]+\\}$"
       }
     }
     "return success when credit is added" in {
@@ -55,7 +55,7 @@ class UserserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest 
       )
       postRequest ~> userRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"user_id\":\"[\\d]+\"\\,\"credit\":\"[\\d]+\"}$"
+        responseAs[String] should fullyMatch regex "^\\{\"user_id\":[\\d]+\\,\"credit\":[\\d]+\\}$"
       }
     }
   }
