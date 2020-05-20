@@ -16,7 +16,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class OrderRoutes(orderRepository: ActorRef[UserRepository.Command])(implicit val system: ActorSystem[_]) extends JsonFormats {
+class OrderRoutes(orderRepository: ActorRef[OrderHandler.OrderCommand])(implicit val system: ActorSystem[_]) extends JsonFormats {
 
   import OrderHandler._
   import akka.actor.typed.scaladsl.AskPattern.Askable
@@ -29,7 +29,7 @@ class OrderRoutes(orderRepository: ActorRef[UserRepository.Command])(implicit va
       concat(
         path("create" / Segment) { userId =>
           post {
-            val identifierResponse: Future[GetUserIdentifierResponse] = orderRepository.ask(UserRepository.CreateUser)
+            val identifierResponse = orderRepository.ask(OrderHandler.CreateOrder(userId))
             rejectEmptyResponse {
               onSuccess(identifierResponse) { response =>
                 complete(response.identifier)

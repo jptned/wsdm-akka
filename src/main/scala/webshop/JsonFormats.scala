@@ -36,7 +36,7 @@ trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {
     def read(value: JsValue) = {
       value.asJsObject.getFields("user_id", "credit") match {
         case Seq(JsString(userId), JsNumber(credit)) => User(UserIdentifier(UUID.fromString(userId)), credit.toLong)
-        case _ => throw DeserializationException("Color expected")
+        case _ => throw DeserializationException("User expected")
       }
     }
   }
