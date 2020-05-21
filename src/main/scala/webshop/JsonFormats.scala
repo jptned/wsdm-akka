@@ -56,7 +56,7 @@ trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {
 
   implicit object OrderJsonFormat extends RootJsonFormat[StoredOrder]{
     def write(order: StoredOrder) = JsObject("order_id" -> JsString(order.orderId.orderId.toString),
-      "user_id" -> JsNumber(order.order.userId.toString), "total_cost" -> JsNumber(order.order.totalCost),
+      "user_id" -> JsString(order.order.userId.userId.toString), "total_cost" -> JsNumber(order.order.totalCost),
       "paid" -> {
         if (order.status.equals(OrderStatus.OrderPaid)) { JsString("true")} else {JsString("false")}
       })

@@ -6,11 +6,14 @@ import akka.util.Timeout
 import webshop.stock.Stock
 import webshop.stock.Stock.ItemIdentifier
 
+import scala.concurrent.Future
+
 //import akka.actor.typed.ActorRef
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.persistence.{AtLeastOnceDelivery, PersistentActor}
 import webshop.user.UserRepository.{Command, UserIdentifier}
+import scala.concurrent.duration._
 
 
 class OrderHandler(stock: ActorRef) extends PersistentActor with AtLeastOnceDelivery with ActorLogging {
@@ -22,31 +25,40 @@ class OrderHandler(stock: ActorRef) extends PersistentActor with AtLeastOnceDeli
   var orderClients = Map.empty[OrderIdentifier, ActorRef]
   var orders = Map.empty[OrderIdentifier, StoredOrder]
 
+  context.setReceiveTimeout(1.hour)
+
 //  PartialFunction[Receive, Behavior[OrderCommand]]
 
   override def receiveCommand: Receive = {
-    case CreateOrder(userId, replyTo) =>
+    case CreateOrder(userId) =>
+      log.info("Received new order for processing")
+      println("userId " + userId)
       val order = StoredOrder(OrderIdentifier.generate, OrderStatus.New, Order(userId, List(), 0))
-      replyTo ! GetOrderIdentifierResponse(Some(order.orderId))
+      sender() ! GetOrderIdentifierResponse(Some(order.orderId))
       persist(OrderCreated(order))(handleEvent)
 
-    case RemoveOrder(orderId, replyTo) if orders.contains(orderId) =>
-      replyTo ! Succeed
+    case RemoveOrder(orderId) if orders.contains(orderId) =>
+      log.info("Received new order for processing")
+      sender() ! Succeed
       persist(OrderRemoved(orderId))(handleEvent)
 
-    case RemoveOrder(orderId, replyTo) =>
-      replyTo ! Failed("This order does not exist.")
+    case RemoveOrder(_) =>
+      log.info("Received new order for processing")
+      sender() ! Failed("This order does not exist.")
 
-    case FindOrder(orderId, replyTo) =>
-      replyTo ! GetOrderResponse(orders.get(orderId))
+    case FindOrder(orderId) =>
+      log.info("Received new order for processing")
+      sender() ! GetOrderResponse(orders.get(orderId))
 
-    case AddItemToOrder(orderId, itemId, replyTo) if orders.contains(orderId) =>
-      stock ! Stock.GetPriceItem(orderId, itemId, replyTo)
+    case AddItemToOrder(orderId, itemId) if orders.contains(orderId) =>
+      stock ! Stock.GetPriceItem(orderId, itemId, sender())
 
-    case AddItemToOrder(orderId, itemId, replyTo) =>
-      replyTo ! Failed("This order does not exist.")
+    case AddItemToOrder(orderId, itemId) =>
+      log.info("Received new order for processing")
+      sender() ! Failed("This order does not exist.")
 
     case ReceivedPriceItem(orderId, itemId, price, succeed, replyTo) =>
+      log.info("Received new order for processing")
       if (succeed) {
         replyTo ! Succeed
         persist(ItemAddedToOrder(orderId, itemId, price))(handleEvent)
@@ -62,13 +74,17 @@ class OrderHandler(stock: ActorRef) extends PersistentActor with AtLeastOnceDeli
 
   private def handleEvent(event: OrderEvent): Unit = event match {
     case OrderCreated(order) =>
+      println("orders " + orders.toList)
       orders += order.orderId -> order
+      println("orders " + orders.toList)
       if (recoveryFinished) {
         orderClients += order.orderId -> sender()
       }
 
     case OrderRemoved(orderId) =>
+      println("orders " + orders.toList)
       orders -= orderId
+      println("orders " + orders.toList)
 
     case ItemAddedToOrder(orderId, itemId, price) =>
       itemId :: orders(orderId).order.items
@@ -80,7 +96,8 @@ class OrderHandler(stock: ActorRef) extends PersistentActor with AtLeastOnceDeli
 
 object OrderHandler {
 
-//  def props(validator: ActorRef, executor: ActorRef): Props = Props(new OrderHandler.(validator, executor))
+  def props(stock: ActorRef): Props = Props(new OrderHandler(stock))
+
   sealed trait OrderCommand
 
   case class OrderIdentifier(orderId: UUID) extends AnyVal
@@ -88,15 +105,15 @@ object OrderHandler {
     def generate = OrderIdentifier(UUID.randomUUID())
   }
 
-  case class Order(userId: UserIdentifier, items: List[ItemIdentifier], totalCost: Long)
+  case class Order(userId: UserIdentifier, var items: List[ItemIdentifier], var totalCost: Long)
   case class StoredOrder(orderId: OrderIdentifier, status: OrderStatus, order: Order)
 
-  case class CreateOrder(userId: UserIdentifier, replyTo: ActorRef) extends OrderCommand
-  case class RemoveOrder(orderId: OrderIdentifier, replyTo: ActorRef) extends OrderCommand
-  case class FindOrder(orderId: OrderIdentifier, replyTo: ActorRef) extends OrderCommand
-  case class AddItemToOrder(orderId: OrderIdentifier, itemId: ItemIdentifier, replyTo: ActorRef) extends OrderCommand
-  case class RemoveItemFromOrder(orderId: OrderIdentifier, itemId: ItemIdentifier, replyTo: ActorRef) extends OrderCommand
-  case class CheckoutOrder(orderId: OrderIdentifier, replyTo: ActorRef) extends OrderCommand
+  case class CreateOrder(userId: UserIdentifier) extends OrderCommand
+  case class RemoveOrder(orderId: OrderIdentifier) extends OrderCommand
+  case class FindOrder(orderId: OrderIdentifier) extends OrderCommand
+  case class AddItemToOrder(orderId: OrderIdentifier, itemId: ItemIdentifier) extends OrderCommand
+  case class RemoveItemFromOrder(orderId: OrderIdentifier, itemId: ItemIdentifier) extends OrderCommand
+  case class CheckoutOrder(orderId: OrderIdentifier) extends OrderCommand
 
   case class ValidatePayOrder(orderId: OrderIdentifier) extends OrderCommand
   case class RejectPayOrder(orderId: OrderIdentifier) extends OrderCommand
