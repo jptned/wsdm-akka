@@ -10,6 +10,7 @@ import akka.util.Timeout
 import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.server.Route
 import akka.http.scaladsl.server.Directives._
+import webshop.stock.Stock.ItemIdentifier
 import webshop.user.UserRepository._
 
 import scala.concurrent.Future
@@ -18,9 +19,11 @@ import scala.concurrent.duration._
 
 class OrderRoutes(orderRepository: ActorRef[OrderHandler.OrderCommand])(implicit val system: ActorSystem[_]) extends JsonFormats {
 
+//trait OrderRoute extends OrderHandler with JsonFormats {
   import OrderHandler._
   import akka.actor.typed.scaladsl.AskPattern.Askable
 
+//  implicit val system: ActorSystem[_]
   implicit val timeout: Timeout = 3.seconds
   implicit val scheduler = system.scheduler
 
@@ -29,7 +32,8 @@ class OrderRoutes(orderRepository: ActorRef[OrderHandler.OrderCommand])(implicit
       concat(
         path("create" / Segment) { userId =>
           post {
-            val identifierResponse = orderRepository.ask(OrderHandler.CreateOrder(userId))
+            val identifierResponse: Future[GetOrderIdentifierResponse] = orderRepository.ask(CreateOrder(UserIdentifier(UUID
+              .fromString(userId)), _))
             rejectEmptyResponse {
               onSuccess(identifierResponse) { response =>
                 complete(response.identifier)
@@ -39,55 +43,52 @@ class OrderRoutes(orderRepository: ActorRef[OrderHandler.OrderCommand])(implicit
         },
         path("find" / Segment) { orderId =>
           get {
-            val maybeUser: Future[GetUserResponse] = orderRepository.ask(UserRepository.FindUser(UserIdentifier(UUID
-              .fromString(userId)), _))
+            val maybeOrder: Future[GetOrderResponse] = orderRepository.ask(FindOrder(OrderIdentifier(UUID.fromString(orderId)), _))
             rejectEmptyResponse {
-              onSuccess(maybeUser) { response =>
-                complete(response.maybeUser)
+              onSuccess(maybeOrder) { response =>
+                complete(response.maybeOrder)
               }
             }
           }
         },
         path("remove" / Segment) { orderId =>
           delete {
-            val operationPerformed: Future[Response] = orderRepository.ask(UserRepository.RemoveUser(UserIdentifier(UUID.fromString(userId)), _))
-            //             onSuccess(UserRegistry.DeleteUser(id)) { performed =>
-            //               complete((StatusCodes.OK), performed)
-            //             }
+            val operationPerformed: Future[OrderResponse] = orderRepository.ask(RemoveOrder(OrderIdentifier(UUID.fromString(orderId)), _))
             onSuccess(operationPerformed) {
-              case UserRepository.OK => complete(StatusCodes.OK)
-              case UserRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
+              case OrderHandler.Succeed => complete(StatusCodes.OK)
+              case OrderHandler.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
             }
           }
         },
         path("addItem" / Segment / Segment) { (orderId, itemId) =>
           post {
-            val operationPerformed: Future[CreditStatus] = userRepository.ask(UserRepository.CreditSubtract(UserIdentifier(UUID.fromString(userId)), amount, _))
-            onSuccess(operationPerformed) {
-              case UserRepository.CreditFailure(reason) => complete(StatusCodes.InternalServerError -> reason)
-              case UserRepository.CreditSuccess() => complete(StatusCodes.OK)
+            val operationPerformed: Future[OrderResponse] = orderRepository.ask(AddItemToOrder(
+              OrderIdentifier(UUID.fromString(orderId)), ItemIdentifier(UUID.fromString(itemId)), _))
+            onSuccess(operationPerformed) { _ =>
+              complete(StatusCodes.OK)
             }
           }
         },
         path("removeItem" / Segment / Segment) { (orderId, itemId) =>
-          post {
-            val operationPerformed: Future[CreditStatus] = userRepository.ask(UserRepository.CreditSubtract(UserIdentifier(UUID.fromString(userId)), amount, _))
+          delete {
+            val operationPerformed: Future[OrderResponse] = orderRepository.ask(RemoveItemFromOrder(
+              OrderIdentifier(UUID.fromString(orderId)), ItemIdentifier(UUID.fromString(itemId)), _))
             onSuccess(operationPerformed) {
-              case UserRepository.CreditFailure(reason) => complete(StatusCodes.InternalServerError -> reason)
-              case UserRepository.CreditSuccess() => complete(StatusCodes.OK)
+              case OrderHandler.Succeed => complete(StatusCodes.OK)
+              case OrderHandler.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
             }
           }
         },
-        path("checkout" / Segment) { orderId =>
-          post {
-            val identifierResponse: Future[GetUserIdentifierResponse] = orderRepository.ask(UserRepository.CreateUser)
-            rejectEmptyResponse {
-              onSuccess(identifierResponse) { response =>
-                complete(response.identifier)
-              }
-            }
-          }
-        }
+//        path("checkout" / Segment) { orderId =>
+//          post {
+//            val identifierResponse: Future[GetUserIdentifierResponse] = orderRepository.ask(UserRepository.CreateUser)
+//            rejectEmptyResponse {
+//              onSuccess(identifierResponse) { response =>
+//                complete(response.identifier)
+//              }
+//            }
+//          }
+//        }
       )
     }
   }

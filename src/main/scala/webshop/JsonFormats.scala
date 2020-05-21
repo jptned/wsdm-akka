@@ -3,6 +3,8 @@ import java.util.UUID
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsArray, JsNumber, JsObject, JsString, JsValue, JsonFormat, RootJsonFormat, RootJsonWriter}
+import webshop.order.OrderHandler.{Order, OrderIdentifier, StoredOrder}
+import webshop.order.OrderStatus
 import webshop.user.UserRepository.ActionPerformed
 
 
@@ -40,7 +42,32 @@ trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {
       }
     }
   }
-  implicit val usersJsonFormat = jsonFormat1(Users)
+//  implicit val usersJsonFormat = jsonFormat1(Users)
 
   implicit val actionPerformedJsonFormat = jsonFormat1(ActionPerformed)
+
+  implicit object orderIdentifierJsonFormat extends RootJsonFormat[OrderIdentifier] {
+    def write(identifier: OrderIdentifier) = JsObject("order_id" -> JsString(identifier.orderId.toString))
+    def read(value: JsValue): OrderIdentifier = value match {
+      case JsString(uuid) => OrderIdentifier(UUID.fromString(uuid))
+      case _ => throw DeserializationException("Expected hexadecimal UUID string")
+    }
+  }
+
+  implicit object OrderJsonFormat extends RootJsonFormat[StoredOrder]{
+    def write(order: StoredOrder) = JsObject("order_id" -> JsString(order.orderId.orderId.toString),
+      "user_id" -> JsNumber(order.order.userId.toString), "total_cost" -> JsNumber(order.order.totalCost),
+      "paid" -> {
+        if (order.status.equals(OrderStatus.OrderPaid)) { JsString("true")} else {JsString("false")}
+      })
+//      "items" -> JsArray(order.order.items.map(id => jsonFormat1(id)).toVector))
+    def read(value: JsValue): StoredOrder = {
+      value.asJsObject.getFields("order_id", "total_cost", "user_id", "paid") match {
+        case Seq(JsString(orderId), JsNumber(totalCost), JsString(userId), JsString(paid)) =>
+          StoredOrder(OrderIdentifier(UUID.fromString(orderId)), OrderStatus.New,
+            Order(UserIdentifier(UUID.fromString(userId)), List(), totalCost.toLong))
+        case _ => throw DeserializationException("User expected")
+      }
+    }
+  }
 }

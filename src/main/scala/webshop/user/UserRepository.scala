@@ -31,6 +31,7 @@ object UserRepository {
   final case class RemoveUser(id: UserIdentifier, replyTo: ActorRef[Response]) extends Command
   final case class CreditSubtract(id: UserIdentifier, amount: Long, replyTo: ActorRef[CreditStatus]) extends Command
   final case class CreditAdd(id: UserIdentifier, amount: Long, replyTo: ActorRef[CreditSuccess]) extends Command
+  final case class CheckCreditAmount(id: UserIdentifier, amount: Long) extends Command
 
   final case class GetUserIdentifierResponse(identifier: Option[UserIdentifier])
   final case class GetUserResponse(maybeUser: Option[User])
@@ -73,6 +74,11 @@ object UserRepository {
       replyTo ! CreditSuccess()
       users(id).credit += amount
       registry(users)
+//    case CheckCreditAmount(id, amount) if users(id).credit - amount < 0 =>
+//      sender() ! PaymentService.Failed
+//    case CheckCreditAmount(id, amount)  =>
+//      sender() ! PaymentService.Succeed
+
   }
 
 }

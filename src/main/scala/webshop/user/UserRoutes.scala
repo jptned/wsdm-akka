@@ -51,9 +51,6 @@ class UserRoutes(userRepository: ActorRef[UserRepository.Command])(implicit val 
          path("remove" / Segment) { userId =>
            delete {
              val operationPerformed: Future[Response] = userRepository.ask(UserRepository.RemoveUser(UserIdentifier(UUID.fromString(userId)), _))
-//             onSuccess(UserRegistry.DeleteUser(id)) { performed =>
-//               complete((StatusCodes.OK), performed)
-//             }
              onSuccess(operationPerformed) {
                case UserRepository.OK => complete(StatusCodes.OK)
                case UserRepository.KO(reason) => complete(StatusCodes.InternalServerError -> reason)
