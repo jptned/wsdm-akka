@@ -1,9 +1,17 @@
 package types
 
-import akka.cluster.ddata.{GCounter, PNCounter, ReplicatedData}
+import akka.cluster.ddata.{PNCounter, ReplicatedData, SelfUniqueAddress}
 
 final class StockType(item_id: Long, stock: PNCounter, price: Long) extends ReplicatedData {
   override type T = this.type
+
+  def increment(n: Long)(implicit node: SelfUniqueAddress): StockType = {
+    copy(stock = this.stock.increment(n))
+  }
+
+  def decrement(n: Long)(implicit node: SelfUniqueAddress): StockType = {
+    copy(stock = this.stock.decrement(n))
+  }
 
   override def merge(that: StockType.this.type): StockType.this.type = {
     copy(stock = that.stock.merge(this.stock))
