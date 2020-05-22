@@ -1,8 +1,12 @@
 package types
 
-import akka.cluster.ddata.{PNCounter, ReplicatedData, SelfUniqueAddress}
+import akka.cluster.ddata.{Key, PNCounter, ReplicatedData, ReplicatedDataSerialization, SelfUniqueAddress}
 
-final class StockType(val item_id: Long, stock: PNCounter, val price: Long) extends ReplicatedData {
+object StockType {
+  def create(item_id: String, price: Long): StockType = new StockType(item_id, PNCounter.empty, price)
+}
+
+final class StockType(val item_id: String, stock: PNCounter, val price: Long) extends ReplicatedData {
   override type T = this.type
 
   def increment(n: Long)(implicit node: SelfUniqueAddress): StockType = {
@@ -17,8 +21,11 @@ final class StockType(val item_id: Long, stock: PNCounter, val price: Long) exte
     copy(stock = that.stock.merge(this.stock))
   }
 
-  private def copy(item_id: Long = this.item_id, stock: PNCounter = this.stock, price: Long = this.price): StockType =
+  private def copy(item_id: String = this.item_id, stock: PNCounter = this.stock, price: Long = this.price): StockType =
     new StockType(item_id, stock, price)
 
   def stockValue: BigInt = stock.value
 }
+
+@SerialVersionUID(1L)
+final case class StockTypeKey(_id: String) extends Key[StockType](_id) with ReplicatedDataSerialization

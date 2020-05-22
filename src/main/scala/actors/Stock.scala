@@ -7,32 +7,33 @@ import akka.cluster.ddata.{LWWMap, LWWMapKey, ReplicatedData, SelfUniqueAddress}
 import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Get, Update}
-import types.StockType
+import types.{StockType, StockTypeKey}
 
 object Stock {
   sealed trait Command
-  final case class FindStock(replyTo: ActorRef[Stock]) extends Command
-  final case class SubtractStock(item_id: Long, number: Long, replyTo: ActorRef[Stock]) extends Command
-  final case class AddStock(item_id: Long, number: Long, replyTo: ActorRef[Stock]) extends Command
-  final case class CreateStock(price: Long, replyTo: ActorRef[Stock]) extends Command
+  final case class FindStock(replyTo: ActorRef[StockResponse]) extends Command
+  final case class SubtractStock(number: Long, replyTo: ActorRef[StockResponse]) extends Command
+  final case class AddStock(number: Long, replyTo: ActorRef[StockResponse]) extends Command
+  final case class CreateStock(price: Long, replyTo: ActorRef[StockResponse]) extends Command
 
-  final case class Stock(item_id: Long, stock: BigInt, price: Long)
+  sealed trait StockResponse
+  final case class Stock(item_id: String, stock: BigInt, price: Long) extends StockResponse
+  final case class Failed(reason: String) extends StockResponse
 
   private sealed trait InternalCommand extends Command
-  private case class InternalFindResponse(replyTo: ActorRef[Stock], rsp: GetResponse[LWWMap[String, StockType]]) extends InternalCommand
-  private case class InternalSubtractResponse[A <: ReplicatedData](rsp: UpdateResponse[A]) extends InternalCommand
-  private case class InternalAddResponse[A <: ReplicatedData](rsp: UpdateResponse[A]) extends InternalCommand
-  private case class InternalCreateResponse(stock_id: Long, getResponse: GetResponse[LWWMap[String, StockType]]) extends InternalCommand
+  private case class InternalFindResponse(replyTo: ActorRef[StockResponse], rsp: GetResponse[StockType]) extends InternalCommand
+  private case class InternalUpdateResponse[A <: ReplicatedData](rsp: UpdateResponse[A]) extends InternalCommand
+  private case class InternalCreateResponse(stock_id: Long, getResponse: GetResponse[StockType]) extends InternalCommand
 
   private val timeout = 3.seconds
   private val readMajority = ReadMajority(timeout)
   private val writeMajority = WriteMajority(timeout)
 
-  def apply(item_id: Long): Behavior[Command] = Behaviors.setup { context =>
-    DistributedData.withReplicatorMessageAdapter[Command, LWWMap[String, StockType]] { replicator =>
+  def apply(item_id: String): Behavior[Command] = Behaviors.setup { context =>
+    DistributedData.withReplicatorMessageAdapter[Command, StockType] { replicator =>
       implicit val node: SelfUniqueAddress = DistributedData(context.system).selfUniqueAddress
 
-      val DataKey = LWWMapKey[String, StockType]("stock-" + item_id)
+      val DataKey = StockTypeKey("stock-" + item_id)
 
       def behavior = Behaviors.receiveMessagePartial(
         receiveFindStock
@@ -50,13 +51,12 @@ object Stock {
           Behaviors.same
 
         case InternalFindResponse(replyTo, g @ GetSuccess(DataKey, _)) =>
-          val data = g.get(DataKey)
-          val stock = data.entries.values.head
+          val stock = g.get(DataKey)
           replyTo ! Stock(stock.item_id, stock.stockValue, stock.price)
           Behaviors.same
 
         case InternalFindResponse(replyTo, NotFound(DataKey, _)) =>
-          // Todo: send wrong response
+          replyTo ! Failed("Couldn't find " + DataKey)
           Behaviors.same
 
         case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
@@ -68,60 +68,28 @@ object Stock {
           Behaviors.same
       }
 
-      def reveiveSubtractStock: PartialFunction[Command, Behavior[Command]] = {}
-      def receiveAddStock: PartialFunction[Command, Behavior[Command]] = {}
-      def receiveCreateStock: PartialFunction[Command, Behavior[Command]] = {}
-
-      def receiveAddItem: PartialFunction[Command, Behavior[Command]] = {
-        case AddItem(item) =>
+      def reveiveSubtractStock: PartialFunction[Command, Behavior[Command]] = {
+        case SubtractStock(number, replyTo) =>
           replicator.askUpdate(
-            askReplyTo => Update(DataKey, ORMap.empty[String, LineItem], writeMajority, askReplyTo) {
-              cart => updateCart(cart, item)
+            askReplyTo => Update(DataKey, StockType.create(item_id, 0), writeMajority, askReplyTo) {
+              stock => stock.decrement(number)
             },
             InternalUpdateResponse.apply)
 
           Behaviors.same
       }
 
-      def updateCart(data: ORMap[String, LineItem], item: LineItem): ORMap[String, LineItem] = {
-        data.get(item.productId) match {
-          case Some(LineItem(_, _, existingQuantity)) =>
-            data :+ (item.productId -> item.copy(quantity = existingQuantity + item.quantity))
-          case None => data :+ (item.productId -> item)
-        }
-      }
+      def receiveAddStock: PartialFunction[Command, Behavior[Command]] = {
+        case AddStock(number, replyTo) =>
+          replicator.askUpdate(
+            askReplyTo => Update(DataKey, StockType.create(item_id, 0), writeMajority, askReplyTo) {
+              stock => stock.increment(number)
+            },
+            InternalUpdateResponse.apply)
 
-      def receiveRemoveItem: PartialFunction[Command, Behavior[Command]] = {
-        case RemoveItem(productId) =>
-          // Try to fetch latest from a majority of nodes first, since ORMap
-          // remove must have seen the item to be able to remove it.
-          replicator.askGet(
-            askReplyTo => Get(DataKey, readMajority, askReplyTo),
-            rsp => InternalRemoveItem(productId, rsp))
+          Behaviors.same}
 
-          Behaviors.same
-
-        case InternalRemoveItem(productId, GetSuccess(DataKey, _)) =>
-          removeItem(productId)
-          Behaviors.same
-
-        case InternalRemoveItem(productId, GetFailure(DataKey, _)) =>
-          // ReadMajority failed, fall back to best effort local value
-          removeItem(productId)
-          Behaviors.same
-
-        case InternalRemoveItem(_, NotFound(DataKey, _)) =>
-          // nothing to remove
-          Behaviors.same
-      }
-
-      def removeItem(productId: String): Unit = {
-        replicator.askUpdate(
-          askReplyTo => Update(DataKey, ORMap.empty[String, LineItem], writeMajority, askReplyTo) {
-            _.remove(node, productId)
-          },
-          InternalUpdateResponse.apply)
-      }
+      def receiveCreateStock: PartialFunction[Command, Behavior[Command]] = {}
 
       def receiveOther: PartialFunction[Command, Behavior[Command]] = {
         case InternalUpdateResponse(_: UpdateSuccess[_]) => Behaviors.same
