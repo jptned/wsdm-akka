@@ -3,35 +3,36 @@ package actors
 import scala.concurrent.duration._
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.ddata.{ORMap, ORMapKey, PNCounterKey, ReplicatedData, SelfUniqueAddress}
+import akka.cluster.ddata.{LWWMap, LWWMapKey, ReplicatedData, SelfUniqueAddress}
 import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Get, Update}
+import types.StockType
 
 object Stock {
   sealed trait Command
-  final case class FindStock(replyTo: ActorRef[StockResponse]) extends Command
-  final case class SubtractStock(item_id: Long, number: Long, replyTo: ActorRef[StockResponse]) extends Command
-  final case class AddStock(item_id: Long, number: Long, replyTo: ActorRef[StockResponse]) extends Command
+  final case class FindStock(replyTo: ActorRef[Stock]) extends Command
+  final case class SubtractStock(item_id: Long, number: Long, replyTo: ActorRef[Stock]) extends Command
+  final case class AddStock(item_id: Long, number: Long, replyTo: ActorRef[Stock]) extends Command
   final case class CreateStock(price: Long, replyTo: ActorRef[Stock]) extends Command
 
-  final case class Stock(item_id: Long, stock: Long, price: Long)
+  final case class Stock(item_id: Long, stock: BigInt, price: Long)
 
   private sealed trait InternalCommand extends Command
-  private case class InternalFindResponse(replyTo: ActorRef[Stock], rsp: GetResponse[ORMap[String, Stock]]) extends InternalCommand
+  private case class InternalFindResponse(replyTo: ActorRef[Stock], rsp: GetResponse[LWWMap[String, StockType]]) extends InternalCommand
   private case class InternalSubtractResponse[A <: ReplicatedData](rsp: UpdateResponse[A]) extends InternalCommand
   private case class InternalAddResponse[A <: ReplicatedData](rsp: UpdateResponse[A]) extends InternalCommand
-  private case class InternalCreateResponse(stock_id: Long, getResponse: GetResponse[ORMap[String, Stock]]) extends InternalCommand
+  private case class InternalCreateResponse(stock_id: Long, getResponse: GetResponse[LWWMap[String, StockType]]) extends InternalCommand
 
   private val timeout = 3.seconds
   private val readMajority = ReadMajority(timeout)
   private val writeMajority = WriteMajority(timeout)
 
   def apply(item_id: Long): Behavior[Command] = Behaviors.setup { context =>
-    DistributedData.withReplicatorMessageAdapter[Command, ORMap[String, Stock]] { replicator =>
+    DistributedData.withReplicatorMessageAdapter[Command, LWWMap[String, StockType]] { replicator =>
       implicit val node: SelfUniqueAddress = DistributedData(context.system).selfUniqueAddress
 
-      val QuantityDataKey = PNCounterKey("stock-" + userId)
+      val DataKey = LWWMapKey[String, StockType]("stock-" + item_id)
 
       def behavior = Behaviors.receiveMessagePartial(
         receiveFindStock
@@ -50,8 +51,8 @@ object Stock {
 
         case InternalFindResponse(replyTo, g @ GetSuccess(DataKey, _)) =>
           val data = g.get(DataKey)
-          val stock = data.entries.values
-          replyTo ! stock.toList.head
+          val stock = data.entries.values.head
+          replyTo ! Stock(stock.item_id, stock.stockValue, stock.price)
           Behaviors.same
 
         case InternalFindResponse(replyTo, NotFound(DataKey, _)) =>

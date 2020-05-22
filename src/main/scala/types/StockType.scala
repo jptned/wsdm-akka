@@ -2,7 +2,7 @@ package types
 
 import akka.cluster.ddata.{PNCounter, ReplicatedData, SelfUniqueAddress}
 
-final class StockType(item_id: Long, stock: PNCounter, price: Long) extends ReplicatedData {
+final class StockType(val item_id: Long, stock: PNCounter, val price: Long) extends ReplicatedData {
   override type T = this.type
 
   def increment(n: Long)(implicit node: SelfUniqueAddress): StockType = {
@@ -19,4 +19,6 @@ final class StockType(item_id: Long, stock: PNCounter, price: Long) extends Repl
 
   private def copy(item_id: Long = this.item_id, stock: PNCounter = this.stock, price: Long = this.price): StockType =
     new StockType(item_id, stock, price)
+
+  def stockValue: BigInt = stock.value
 }
