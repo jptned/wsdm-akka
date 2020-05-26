@@ -1,15 +1,17 @@
 package actors
 
-import scala.concurrent.duration._
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
-import akka.cluster.ddata.{LWWMap, LWWMapKey, ReplicatedData, SelfUniqueAddress}
+import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Get, Update}
+import akka.cluster.ddata.{ReplicatedData, SelfUniqueAddress}
 import types.{StockType, StockTypeKey}
 
+import scala.concurrent.duration._
+
 object Stock {
+
   sealed trait Command
   final case class FindStock(replyTo: ActorRef[StockResponse]) extends Command
   final case class SubtractStock(number: Long, replyTo: ActorRef[StockResponse]) extends Command
@@ -19,11 +21,12 @@ object Stock {
   sealed trait StockResponse
   final case class Stock(item_id: String, stock: BigInt, price: Long) extends StockResponse
   final case class Failed(reason: String) extends StockResponse
+  final case class Successful() extends StockResponse
 
   private sealed trait InternalCommand extends Command
   private case class InternalFindResponse(replyTo: ActorRef[StockResponse], rsp: GetResponse[StockType]) extends InternalCommand
-  private case class InternalUpdateResponse[A <: ReplicatedData](rsp: UpdateResponse[A]) extends InternalCommand
-  private case class InternalCreateResponse(stock_id: Long, getResponse: GetResponse[StockType]) extends InternalCommand
+  private case class InternalUpdateResponse[A <: ReplicatedData](replyTo: ActorRef[StockResponse], rsp: UpdateResponse[A]) extends InternalCommand
+  private case class InternalCreateResponse(replyTo: ActorRef[StockResponse], getResponse: GetResponse[StockType]) extends InternalCommand
 
   private val timeout = 3.seconds
   private val readMajority = ReadMajority(timeout)
@@ -40,6 +43,7 @@ object Stock {
           .orElse(reveiveSubtractStock)
           .orElse(receiveAddStock)
           .orElse(receiveCreateStock)
+          .orElse(receiveOther)
       )
 
       def receiveFindStock: PartialFunction[Command, Behavior[Command]] = {
@@ -50,7 +54,7 @@ object Stock {
 
           Behaviors.same
 
-        case InternalFindResponse(replyTo, g @ GetSuccess(DataKey, _)) =>
+        case InternalFindResponse(replyTo, g@GetSuccess(DataKey, _)) =>
           val stock = g.get(DataKey)
           replyTo ! Stock(stock.item_id, stock.stockValue, stock.price)
           Behaviors.same
@@ -74,7 +78,7 @@ object Stock {
             askReplyTo => Update(DataKey, StockType.create(item_id, 0), writeMajority, askReplyTo) {
               stock => stock.decrement(number)
             },
-            InternalUpdateResponse.apply)
+            rsp => InternalUpdateResponse(replyTo, rsp))
 
           Behaviors.same
       }
@@ -85,17 +89,33 @@ object Stock {
             askReplyTo => Update(DataKey, StockType.create(item_id, 0), writeMajority, askReplyTo) {
               stock => stock.increment(number)
             },
-            InternalUpdateResponse.apply)
+            rsp => InternalUpdateResponse(replyTo, rsp))
 
-          Behaviors.same}
+          Behaviors.same
+      }
 
-      def receiveCreateStock: PartialFunction[Command, Behavior[Command]] = {}
+      def receiveCreateStock: PartialFunction[Command, Behavior[Command]] = {
+        case CreateStock(price, replyTo) =>
+          replicator.askUpdate(
+            askReplyTo => Update(DataKey, StockType.create(item_id, price), writeMajority, askReplyTo) {
+              stock => stock
+            },
+            rsp => InternalUpdateResponse(replyTo, rsp))
+
+          Behaviors.same
+      }
 
       def receiveOther: PartialFunction[Command, Behavior[Command]] = {
-        case InternalUpdateResponse(_: UpdateSuccess[_]) => Behaviors.same
-        case InternalUpdateResponse(_: UpdateTimeout[_]) => Behaviors.same
-        // UpdateTimeout, will eventually be replicated
-        case InternalUpdateResponse(e: UpdateFailure[_]) => throw new IllegalStateException("Unexpected failure: " + e)
+        case InternalUpdateResponse(replyTo, _: UpdateSuccess[_]) =>
+          replyTo ! Successful()
+          Behaviors.same
+        case InternalUpdateResponse(replyTo, _: UpdateTimeout[_]) =>
+          // UpdateTimeout, will eventually be replicated
+          replyTo ! Successful()
+          Behaviors.same
+        case InternalUpdateResponse(replyTo, e: UpdateFailure[_]) =>
+          replyTo ! Failed("Failure updating " + e)
+          Behaviors.same
       }
 
       behavior
