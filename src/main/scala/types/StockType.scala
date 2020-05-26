@@ -6,8 +6,8 @@ object StockType {
   def create(item_id: String, price: Long): StockType = new StockType(item_id, PNCounter.empty, price)
 }
 
-final class StockType(val item_id: String, stock: PNCounter, val price: Long) extends ReplicatedData {
-  override type T = this.type
+final class StockType(val item_id: String, val stock: PNCounter, val price: Long) extends ReplicatedData {
+  override type T = StockType
 
   def increment(n: Long)(implicit node: SelfUniqueAddress): StockType = {
     copy(stock = this.stock.increment(n))
@@ -17,7 +17,7 @@ final class StockType(val item_id: String, stock: PNCounter, val price: Long) ex
     copy(stock = this.stock.decrement(n))
   }
 
-  override def merge(that: StockType.this.type): StockType.this.type = {
+  override def merge(that: StockType): StockType = {
     copy(stock = that.stock.merge(this.stock))
   }
 
