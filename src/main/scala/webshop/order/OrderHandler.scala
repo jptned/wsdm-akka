@@ -12,7 +12,7 @@ import scala.concurrent.Future
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import akka.persistence.{AtLeastOnceDelivery, PersistentActor}
-import webshop.user.UserRepository.{Command, UserIdentifier}
+import webshop.user.UserRepository.UserIdentifier
 import scala.concurrent.duration._
 
 

@@ -5,7 +5,6 @@ import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsArray, JsNumber, JsObject, JsString, JsValue, JsonFormat, RootJsonFormat, RootJsonWriter}
 import webshop.order.OrderHandler.{Order, OrderIdentifier, StoredOrder}
 import webshop.order.OrderStatus
-import webshop.user.UserRepository.ActionPerformed
 
 
 trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {
@@ -42,9 +41,7 @@ trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {
       }
     }
   }
-//  implicit val usersJsonFormat = jsonFormat1(Users)
 
-  implicit val actionPerformedJsonFormat = jsonFormat1(ActionPerformed)
 
   implicit object orderIdentifierJsonFormat extends RootJsonFormat[OrderIdentifier] {
     def write(identifier: OrderIdentifier) = JsObject("order_id" -> JsString(identifier.orderId.toString))
