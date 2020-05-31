@@ -49,23 +49,20 @@ class UserTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
   
   "User" must {
     val id = "user"
+    val user = testKit.spawn(User(id))
+    val probe = testKit.createTestProbe[User.UserResponse]()
+    
     "create in a single actor" in {
-      val user = testKit.spawn(User(id))
-      val probe = testKit.createTestProbe[User.UserResponse]()
       user ! User.CreateUser(probe.ref)
       probe.expectMessage(User.Successful())
     }
     
     "find in a single actor" in {
-      val user = testKit.spawn(User(id))
-      val probe = testKit.createTestProbe[User.UserResponse]()
       user ! User.FindUser(probe.ref)
       probe.expectMessage(User.User(id, 0))
     }
     
     "add credit in a single actor" in {
-      val user = testKit.spawn(User(id))
-      val probe = testKit.createTestProbe[User.UserResponse]()
       user ! User.AddCredit(100, probe.ref)
       probe.expectMessage(User.Successful())
       user ! User.FindUser(probe.ref)
@@ -73,8 +70,6 @@ class UserTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
     }
     
     "subtract credit in a single actor" in {
-      val user = testKit.spawn(User(id))
-      val probe = testKit.createTestProbe[User.UserResponse]()
       user ! User.SubtractCredit(50, probe.ref)
       probe.expectMessage(User.Successful())
       user ! User.FindUser(probe.ref)
