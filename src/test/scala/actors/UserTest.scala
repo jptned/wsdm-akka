@@ -45,6 +45,22 @@ class UserTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       user ! User.FindUser(probe.ref)
       probe.expectMessage(User.User("4", 50))
     }
+    
+    "not be able to find a user which does not exist" in {
+      val user = testKit.spawn(User("DOESNOTEXIST"))
+      val probe = testKit.createTestProbe[User.UserResponse]()
+      user ! User.FindUser(probe.ref)
+      probe.expectMessage(User.Failed("Couldn't find " + "user-" + "DOESNOTEXIST"))
+    }
+    
+//    "not be able to update credit for non-existing user" in {
+//      val user = testKit.spawn(User("DOESNOTEXIST2"))
+//      val probe = testKit.createTestProbe[User.UserResponse]()
+//      user ! User.AddCredit(50, probe.ref)
+//      probe.expectMessage(User.Successful())
+//      user ! User.FindUser(probe.ref)
+//      probe.expectMessage(User.User("DOESNOTEXIST2", 50))
+//    }
   }
   
   "User" must {
