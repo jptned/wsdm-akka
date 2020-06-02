@@ -53,14 +53,18 @@ class UserTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       probe.expectMessage(User.Failed("Couldn't find " + "user-" + "DOESNOTEXIST"))
     }
     
-//    "not be able to update credit for non-existing user" in {
-//      val user = testKit.spawn(User("DOESNOTEXIST2"))
-//      val probe = testKit.createTestProbe[User.UserResponse]()
-//      user ! User.AddCredit(50, probe.ref)
-//      probe.expectMessage(User.Successful())
-//      user ! User.FindUser(probe.ref)
-//      probe.expectMessage(User.User("DOESNOTEXIST2", 50))
-//    }
+    "throw an error when trying to subtract more credit than user has" in {
+      val user = testKit.spawn(User("5"))
+      val probe = testKit.createTestProbe[User.UserResponse]()
+      user ! User.CreateUser(probe.ref)
+      probe.expectMessage(User.Successful())
+      user ! User.AddCredit(10, probe.ref)
+      probe.expectMessage(User.Successful())
+      user ! User.SubtractCredit(11, probe.ref)
+      probe.expectMessage(User.NotEnoughCredit())
+      user ! User.FindUser(probe.ref)
+      probe.expectMessage(User.User("5", 10))
+    }
   }
   
   "User" must {
@@ -88,6 +92,13 @@ class UserTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
     "subtract credit in a single actor" in {
       user ! User.SubtractCredit(50, probe.ref)
       probe.expectMessage(User.Successful())
+      user ! User.FindUser(probe.ref)
+      probe.expectMessage(User.User(id, 50))
+    }
+    
+    "refuse subtracting too much credit" in {
+      user ! User.SubtractCredit(51, probe.ref)
+      probe.expectMessage(User.NotEnoughCredit())
       user ! User.FindUser(probe.ref)
       probe.expectMessage(User.User(id, 50))
     }

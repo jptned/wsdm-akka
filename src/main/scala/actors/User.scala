@@ -6,26 +6,38 @@ import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Get, Update}
 import akka.cluster.ddata.{ReplicatedData, SelfUniqueAddress}
-import types.{UserType, UserTypeKey}
+import types.{NotEnoughCreditException, UserType, UserTypeKey}
 
 import scala.concurrent.duration._
 
 object User {
 
   sealed trait Command
+
   final case class FindUser(replyTo: ActorRef[UserResponse]) extends Command
+
   final case class SubtractCredit(number: Long, replyTo: ActorRef[UserResponse]) extends Command
+
   final case class AddCredit(number: Long, replyTo: ActorRef[UserResponse]) extends Command
+
   final case class CreateUser(replyTo: ActorRef[UserResponse]) extends Command
 
   sealed trait UserResponse
+
   final case class User(user_id: String, credit: BigInt) extends UserResponse
+
   final case class Failed(reason: String) extends UserResponse
+
+  final case class NotEnoughCredit() extends UserResponse
+
   final case class Successful() extends UserResponse
 
   private sealed trait InternalCommand extends Command
+
   private case class InternalFindResponse(replyTo: ActorRef[UserResponse], rsp: GetResponse[UserType]) extends InternalCommand
+
   private case class InternalUpdateResponse[A <: ReplicatedData](replyTo: ActorRef[UserResponse], rsp: UpdateResponse[A]) extends InternalCommand
+
   private case class InternalCreateResponse(replyTo: ActorRef[UserResponse], getResponse: GetResponse[UserType]) extends InternalCommand
 
   private val timeout = 3.seconds
@@ -114,7 +126,14 @@ object User {
           replyTo ! Successful()
           Behaviors.same
         case InternalUpdateResponse(replyTo, e: UpdateFailure[_]) =>
-          replyTo ! Failed("Failure updating " + e)
+
+          e match {
+            case ModifyFailure(_, _, NotEnoughCreditException(), _) =>
+              replyTo ! NotEnoughCredit()
+            case _ =>
+              replyTo ! Failed("Failure updating " + e)
+          }
+
           Behaviors.same
       }
 

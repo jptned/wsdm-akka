@@ -6,6 +6,8 @@ object UserType {
   def create(user_id: String) : UserType = new UserType(user_id, PNCounter.empty)
 }
 
+final case class NotEnoughCreditException() extends Exception
+
 final class UserType(val user_id: String, val credit: PNCounter) extends ReplicatedData {
   override type T = UserType
   
@@ -14,6 +16,7 @@ final class UserType(val user_id: String, val credit: PNCounter) extends Replica
   }
   
   def decrement(n: Long)(implicit node: SelfUniqueAddress): UserType = {
+    if (this.credit.value < n) throw NotEnoughCreditException()
     copy(credit = this.credit.decrement(n))
   }
 
