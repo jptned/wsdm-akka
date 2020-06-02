@@ -6,7 +6,7 @@ import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Get, Update}
 import akka.cluster.ddata.{ReplicatedData, SelfUniqueAddress}
-import types.{StockType, StockTypeKey}
+import types.{NotEnoughStockException, StockType, StockTypeKey}
 
 import scala.concurrent.duration._
 
@@ -21,6 +21,7 @@ object Stock {
   sealed trait StockResponse
   final case class Stock(item_id: String, stock: BigInt, price: Long) extends StockResponse
   final case class Failed(reason: String) extends StockResponse
+  final case class NotEnoughStock() extends StockResponse
   final case class Successful() extends StockResponse
 
   private sealed trait InternalCommand extends Command
@@ -113,8 +114,14 @@ object Stock {
           // UpdateTimeout, will eventually be replicated
           replyTo ! Successful()
           Behaviors.same
-        case InternalUpdateResponse(replyTo, e: UpdateFailure[_]) =>
-          replyTo ! Failed("Failure updating " + e)
+        case InternalUpdateResponse(replyTo, e: UpdateFailure[a]) =>
+          e match {
+            case ModifyFailure(_, _, NotEnoughStockException(_, _), _) =>
+              replyTo ! NotEnoughStock()
+            case _ =>
+              replyTo ! Failed("Failure updating " + e)
+          }
+
           Behaviors.same
       }
 

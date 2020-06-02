@@ -39,10 +39,23 @@ class StockTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       probe.expectMessage(Stock.Successful())
       stock ! Stock.AddStock(100, probe.ref)
       probe.expectMessage(Stock.Successful())
-      stock ! Stock.SubtractStock(31, probe.ref)
+      stock ! Stock.SubtractStock(30, probe.ref)
       probe.expectMessage(Stock.Successful())
       stock ! Stock.FindStock(probe.ref)
       probe.expectMessage(Stock.Stock("4", 70, 1))
+    }
+
+    "not subtract stock if it is not present" in {
+      val stock = testKit.spawn(Stock("4"))
+      val probe = testKit.createTestProbe[Stock.StockResponse]()
+      stock ! Stock.CreateStock(1, probe.ref)
+      probe.expectMessage(Stock.Successful())
+      stock ! Stock.AddStock(10, probe.ref)
+      probe.expectMessage(Stock.Successful())
+      stock ! Stock.SubtractStock(30, probe.ref)
+      probe.expectMessage(Stock.NotEnoughStock())
+      stock ! Stock.FindStock(probe.ref)
+      probe.expectMessage(Stock.Stock("4", 10, 1))
     }
 
     "not be able to find a stock which does not exist" in {
@@ -51,15 +64,6 @@ class StockTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       stock ! Stock.FindStock(probe.ref)
       probe.expectMessage(Stock.Failed("Couldn't find " + "stock-" + "DOESNOTEXIST"))
     }
-
-    //    "not be able to update credit for non-existing stock" in {
-    //      val stock = testKit.spawn(Stock("DOESNOTEXIST2"))
-    //      val probe = testKit.createTestProbe[Stock.StockResponse]()
-    //      stock ! Stock.AddCredit(50, probe.ref)
-    //      probe.expectMessage(Stock.Successful())
-    //      stock ! Stock.FindStock(probe.ref)
-    //      probe.expectMessage(Stock.Stock("DOESNOTEXIST2", 50))
-    //    }
   }
 
   "Stock" must {
@@ -78,16 +82,23 @@ class StockTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       probe.expectMessage(Stock.Stock(id, 0, price))
     }
 
-    "add credit in a single actor" in {
+    "add stock in a single actor" in {
       stock ! Stock.AddStock(100, probe.ref)
       probe.expectMessage(Stock.Successful())
       stock ! Stock.FindStock(probe.ref)
       probe.expectMessage(Stock.Stock(id, 100, price))
     }
 
-    "subtract credit in a single actor" in {
+    "subtract stock in a single actor" in {
       stock ! Stock.SubtractStock(50, probe.ref)
       probe.expectMessage(Stock.Successful())
+      stock ! Stock.FindStock(probe.ref)
+      probe.expectMessage(Stock.Stock(id, 50, price))
+    }
+
+    "refuse too much stock in a single actor" in {
+      stock ! Stock.SubtractStock(100, probe.ref)
+      probe.expectMessage(Stock.NotEnoughStock())
       stock ! Stock.FindStock(probe.ref)
       probe.expectMessage(Stock.Stock(id, 50, price))
     }

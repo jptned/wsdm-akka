@@ -6,6 +6,9 @@ object StockType {
   def create(item_id: String, price: Long): StockType = new StockType(item_id, PNCounter.empty, price)
 }
 
+final case class NotEnoughStockException(private val message: String = "",
+                                         private val cause: Throwable = None.orNull) extends Exception(message, cause)
+
 final class StockType(val item_id: String, val stock: PNCounter, val price: Long) extends ReplicatedData {
   override type T = StockType
 
@@ -14,6 +17,7 @@ final class StockType(val item_id: String, val stock: PNCounter, val price: Long
   }
 
   def decrement(n: Long)(implicit node: SelfUniqueAddress): StockType = {
+    if (this.stock.value < n) throw NotEnoughStockException()
     copy(stock = this.stock.decrement(n))
   }
 
