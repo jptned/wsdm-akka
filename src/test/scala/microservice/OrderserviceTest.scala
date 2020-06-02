@@ -14,7 +14,7 @@ class OrderserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"order_id\":\"[\\d]+\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"order_id\":[\\d]+\\}$"
       }
     }
     "return status when deleting order" in {
@@ -24,7 +24,7 @@ class OrderserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return order when finding" in {
@@ -34,7 +34,7 @@ class OrderserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"order_id\":\"[\\d]+\",\"paid\":\"(true|false)\",\"items\":\\[[\"\\d+\"]*\\],\"user\":\"[\\d]+\",\"total_cost\":\"[\\d]+\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"order_id\":[\\d]+,\"paid\":(true|false),\"items\":\\[[\"\\d+\"]*\\],\"user\":[\\d]+,\"total_cost\":[\\d]+\\}$"
       }
     }
     "return status when adding item" in {
@@ -44,7 +44,7 @@ class OrderserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return status when deleting item" in {
@@ -54,17 +54,17 @@ class OrderserviceTest extends AnyWordSpec with Matchers with ScalatestRouteTest
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
     "return status when checking out" in {
       val postRequest = HttpRequest(
         HttpMethods.POST,
-        uri = "/orders/checkout/5/5",
+        uri = "/orders/checkout/5",
       )
       postRequest ~> orderRoutes ~> check {
         status.isSuccess() shouldEqual true
-        responseAs[String] should fullyMatch regex "^\\{\"success\":\"(true|false)\"\\}$"
+        responseAs[String] should fullyMatch regex "^\\{\"success\":(true|false)\\}$"
       }
     }
   }

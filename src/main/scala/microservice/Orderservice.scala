@@ -4,41 +4,59 @@ import akka.actor.ActorSystem
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives.{complete, concat, delete, get, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
+import play.api.libs.json.{JsValue, Json}
 
 trait Orderservice {
   implicit val system:ActorSystem
 
   val orderRoutes: Route =
-    concat(
-      path("orders" / "create"/  LongNumber) { userId =>
-        post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"order_id\":\"1\"}"))
-        }
-      },
-      pathPrefix("orders" / "remove" / LongNumber) { orderId =>
-        delete {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
-        }
-      },
-      pathPrefix("orders" / "find" / LongNumber) { orderId =>
-        get {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"order_id\":\"" + orderId + "\",\"paid\":\"true\",\"items\":[],\"user\":\"6\",\"total_cost\":\"100\"}"))
-        }
-      },
-      pathPrefix("orders" / "addItem" / LongNumber / LongNumber) { (orderId, itemId) =>
-        post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
-        }
-      },
-      pathPrefix("orders" / "removeItem" / LongNumber / LongNumber) { (orderId, itemId) =>
-        delete {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
-        }
-      },
-      pathPrefix("orders" / "checkout" / LongNumber) { (orderId) =>
-        post {
-          complete(HttpEntity(ContentTypes.`application/json`, "{\"success\":\"true\"}"))
-        }
-      },
-    )
+    pathPrefix("orders") {
+      concat(
+        path("create" / LongNumber) { userId =>
+          post {
+            val orderId = 1
+            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("order_id" -> orderId).toString()))
+          }
+        },
+        path("remove" / LongNumber) { orderId =>
+          delete {
+            val success = true
+            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+          }
+        },
+        path("find" / LongNumber) { orderId =>
+          get {
+            val paid = true
+            val user = 5
+            val totalCost = 100
+            val json: JsValue = Json.obj(
+              "order_id" -> orderId,
+              "paid" -> paid,
+              "items" -> Json.arr(),
+              "user" -> user,
+              "total_cost" -> totalCost
+            )
+            complete(HttpEntity(ContentTypes.`application/json`, json.toString()))
+          }
+        },
+        path("addItem" / LongNumber / LongNumber) { (orderId, itemId) =>
+          post {
+            val success = true
+            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+          }
+        },
+        path("removeItem" / LongNumber / LongNumber) { (orderId, itemId) =>
+          delete {
+            val success = true
+            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+          }
+        },
+        path("checkout" / LongNumber) { (orderId) =>
+          post {
+            val success = true
+            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+          }
+        },
+      )
+    }
 }
