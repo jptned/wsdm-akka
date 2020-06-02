@@ -46,7 +46,7 @@ class StockTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
     }
 
     "not subtract stock if it is not present" in {
-      val stock = testKit.spawn(Stock("4"))
+      val stock = testKit.spawn(Stock("5"))
       val probe = testKit.createTestProbe[Stock.StockResponse]()
       stock ! Stock.CreateStock(1, probe.ref)
       probe.expectMessage(Stock.Successful())
@@ -55,7 +55,7 @@ class StockTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       stock ! Stock.SubtractStock(30, probe.ref)
       probe.expectMessage(Stock.NotEnoughStock())
       stock ! Stock.FindStock(probe.ref)
-      probe.expectMessage(Stock.Stock("4", 10, 1))
+      probe.expectMessage(Stock.Stock("5", 10, 1))
     }
 
     "not be able to find a stock which does not exist" in {
