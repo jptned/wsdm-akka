@@ -1,13 +1,15 @@
 package microservice
 
 import akka.actor.ActorSystem
+import akka.actor.typed.scaladsl.ActorContext
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives.{complete, concat, get, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
-import play.api.libs.json.{JsValue, Json}
+import microservice.Webserver.Message
+import play.api.libs.json.Json
 
 trait Stockservice {
-  implicit val system:ActorSystem
+  implicit val ct: ActorContext[Message]
 
   val stockRoutes: Route =
     pathPrefix("stock") {
