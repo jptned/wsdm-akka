@@ -10,7 +10,7 @@ import types.{NotEnoughCreditException, UserType, UserTypeKey}
 
 import scala.concurrent.duration._
 
-object User {
+object UserActor {
 
   sealed trait Command
 
