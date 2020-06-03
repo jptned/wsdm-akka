@@ -4,9 +4,10 @@ import akka.actor.typed.{Behavior, PostStop}
 import akka.actor.typed.scaladsl.Behaviors
 import akka.http.javadsl.model.HttpResponse
 import akka.http.scaladsl.Http.ServerBinding
+import akka.http.scaladsl.server.Directives.concat
 import akka.stream.{ActorMaterializer, Materializer}
-import microservice.models.UserManager
-import microservice.routes.UserRoutes
+import microservice.models.{InventoryManager, UserManager}
+import microservice.routes.{InventoryRoutes, UserRoutes}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 
@@ -38,10 +39,13 @@ object Server {
     implicit val ec: ExecutionContextExecutor = ctx.system.executionContext
 
     val buildUserManager = ctx.spawn(UserManager(), "UserManager")
-    ctx.watch(buildUserManager)
     val userRoutes = new UserRoutes(buildUserManager)(system)
 
-    val serverBinding: Future[Http.ServerBinding] = Http.apply().bindAndHandle(userRoutes.userRoutes, host, port)
+    val buildInventoryManager = ctx.spawn(InventoryManager(), "InventoryManager")
+    val inventoryRoutes = new InventoryRoutes(buildInventoryManager)(system)
+
+    val serverBinding: Future[Http.ServerBinding] = Http.apply().bindAndHandle(concat(userRoutes.userRoutes,
+      inventoryRoutes.inventoryRoutes), host, port)
     ctx.pipeToSelf(serverBinding) {
       case Success(binding) => Started(binding)
       case Failure(ex) => StartFailed(ex)

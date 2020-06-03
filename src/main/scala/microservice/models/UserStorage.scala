@@ -5,6 +5,7 @@ import microservice.setups.Initials.{User, UserId, UserStorageEntityId}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
+import microservice.setups.CborSerializable
 
 
 object UserStorage {
@@ -22,7 +23,7 @@ object UserStorage {
 
   // the protocol for creating an user
   final case class CreateUser(userId: UserId, replyTo: ActorRef[UserResponse]) extends UserCommand
-  final case class UserCreated(userId: UserId) extends UserEvent
+  final case class UserCreated(userId: UserId) extends UserEvent with CborSerializable
   case class Created(userId: UserId) extends UserResponse
 
   // the protocol for looking up an user by its id
@@ -32,15 +33,15 @@ object UserStorage {
 
   // the protocol for removing an user by its id
   final case class RemoveUser(userId: UserId, replyTo: ActorRef[UserResponse]) extends UserCommand
-  final case class UserRemoved(userId: UserId) extends UserEvent
+  final case class UserRemoved(userId: UserId) extends UserEvent with CborSerializable
   case object RemovedSucceed extends UserResponse
   case object RemovedFailed extends UserResponse
 
   // the protocol for adding and subtracting from the credit of an user by its id
   final case class SubtractCredit(userId: UserId, amount: Long, replyTo: ActorRef[UserResponse]) extends UserCommand
-  final case class CreditSubtracted(userId: UserId, amount: Long) extends UserEvent
+  final case class CreditSubtracted(userId: UserId, amount: Long) extends UserEvent with CborSerializable
   final case class AddCredit(userId: UserId, amount: Long, replyTo: ActorRef[UserResponse]) extends UserCommand
-  final case class CreditAdded(userId: UserId, amount: Long) extends UserEvent
+  final case class CreditAdded(userId: UserId, amount: Long) extends UserEvent with CborSerializable
   case object ChangedCreditSucceed extends UserResponse
   case object ChangedCreditFailed extends UserResponse
 
@@ -95,5 +96,6 @@ object UserStorage {
       commandHandler = (state, cmd) => state.applyCommand(context, cmd),
       eventHandler = (state, evt) => state.applyEvent(evt))
   }
+//  }.withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 100, keepNSnapshots = 2))
 
 }

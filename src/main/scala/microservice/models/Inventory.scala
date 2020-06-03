@@ -4,6 +4,7 @@ import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, ReplyEffect}
+import microservice.setups.CborSerializable
 import microservice.setups.Initials.{InventoryEntityId, Item, ItemId}
 
 object Inventory {
@@ -21,7 +22,7 @@ object Inventory {
 
   // the protocol for creating an item
   final case class CreateItem(itemId: ItemId, price: Long, replyTo: ActorRef[InventoryResponse]) extends InventoryCommand
-  final case class ItemCreated(itemId: ItemId, price: Long) extends InventoryEvent
+  final case class ItemCreated(itemId: ItemId, price: Long) extends InventoryEvent with CborSerializable
   case class Created(itemId: ItemId) extends InventoryResponse
 
   // the protocol for looking up an item by its id
@@ -31,9 +32,9 @@ object Inventory {
 
   // the protocol for adding and subtracting from the credit of an user by its id
   final case class SubtractStock(itemId: ItemId, amount: Long, replyTo: ActorRef[InventoryResponse]) extends InventoryCommand
-  final case class StockSubtracted(itemId: ItemId, amount: Long) extends InventoryEvent
+  final case class StockSubtracted(itemId: ItemId, amount: Long) extends InventoryEvent with CborSerializable
   final case class AddStock(itemId: ItemId, amount: Long, replyTo: ActorRef[InventoryResponse]) extends InventoryCommand
-  final case class StockAdded(itemId: ItemId, amount: Long) extends InventoryEvent
+  final case class StockAdded(itemId: ItemId, amount: Long) extends InventoryEvent with CborSerializable
   case object ChangedStockSucceed extends InventoryResponse
   case object ChangedStockFailed extends InventoryResponse
 

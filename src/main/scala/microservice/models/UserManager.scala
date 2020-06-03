@@ -7,7 +7,8 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.cluster.sharding.typed.HashCodeNoEnvelopeMessageExtractor
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import akka.persistence.typed.PersistenceId
-import microservice.setups.Initials.{OrderId, UserId, UserStorageEntityId}
+import microservice.setups.Initials.{UserId, UserStorageEntityId}
+
 
 object UserManager {
 
@@ -69,5 +70,5 @@ object UserManager {
   case class SubtractCredit(userId: UserId, amount: Long, sender: ActorRef[UserStorage.UserResponse]) extends UserManagerCommand
   case class AddCredit(userId: UserId, amount: Long, sender: ActorRef[UserStorage.UserResponse]) extends UserManagerCommand
 
-  val UserStorageTypeKey = EntityTypeKey[UserStorage.UserCommand]("UserStorage")
+  val UserStorageTypeKey:EntityTypeKey[UserStorage.UserCommand] = EntityTypeKey[UserStorage.UserCommand]("UserStorage")
 }

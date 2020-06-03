@@ -67,7 +67,7 @@ class UserRoutes(userManager: ActorRef[UserManager.UserManagerCommand])(implicit
           }
         },
         path("credit" / "add" / Segment / LongNumber) { (userId, amount) =>
-          delete {
+          post {
             val operationPerformed: Future[UserResponse] = userManager.ask(UserManager.AddCredit(UserId(userId),
               amount, _))
             onSuccess(operationPerformed) {
