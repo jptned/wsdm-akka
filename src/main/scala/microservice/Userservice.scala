@@ -24,8 +24,7 @@ trait Userservice {
           post {
             val actor = ct.spawn(User(UUID.randomUUID().toString), "user-create")
             ct.ask(actor, User.CreateUser) {
-              case UserResponse() => AdaptedResponse(message)
-              case Failure(_) => AdaptedResponse("Request failed")
+              //response here
             }
             complete(HttpEntity(ContentTypes.`application/json`, Json.obj("user_id" -> 1).toString()))
           }
