@@ -1,6 +1,6 @@
 package microservice
 
-import actors.User.User
+import actors.UserActor.User
 import akka.actor.typed
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.actor.typed.{ActorRef, Behavior, PostStop}
@@ -11,13 +11,11 @@ import akka.http.scaladsl.model.headers.Server
 import akka.http.scaladsl.server.Directives._
 import akka.io.Tcp.Message
 import akka.stream.{ActorMaterializer, Materializer}
+import microservice.Userservice
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 object Webserver
-  extends Userservice
-    with Orderservice
-    with Paymentservice
-    with Stockservice {
+     {
   sealed trait Message
 
   private final case class StartFailed(cause: Throwable) extends Message
@@ -34,13 +32,15 @@ object Webserver
 
     implicit val materializer: Materializer = Materializer(context.system.toClassic)
     implicit val ec: ExecutionContextExecutor = context.system.executionContext
+    
+    val userservice: Userservice = new Userservice()
 
     val serverBinding: Future[Http.ServerBinding] =     Http().bindAndHandle(
       concat(
-        userRoutes,
-        orderRoutes,
-        stockRoutes,
-        paymentRoutes
+        userservice.userRoutes,
+//        orderRoutes,
+//        stockRoutes,
+//        paymentRoutes
       ),
       host,
       port
@@ -71,6 +71,6 @@ object Webserver
   }
 
   def main(args: Array[String]) {
-    val system: ActorSystem[Webserver.Message] = ActorSystem(Webserver("localhost", 8080), "WebServer")
+    val system: ActorSystem[Webserver.Message] = ActorSystem(Webserver("127.0.0.1", 8080), "WebServer")
   }
 }
