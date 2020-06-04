@@ -1,5 +1,5 @@
 
-package actors
+package microservice.actors
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
 import org.scalatest.wordspec.AnyWordSpecLike

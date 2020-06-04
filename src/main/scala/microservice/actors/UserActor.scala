@@ -1,4 +1,4 @@
-package actors
+package microservice.actors
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
@@ -6,7 +6,7 @@ import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.ddata.typed.scaladsl.Replicator.{Delete, DeleteFailure, Get, Update}
 import akka.cluster.ddata.{ReplicatedData, SelfUniqueAddress}
-import types.{NotEnoughCreditException, UserType, UserTypeKey}
+import microservice.types.{NotEnoughCreditException, UserType, UserTypeKey}
 
 import scala.concurrent.duration._
 

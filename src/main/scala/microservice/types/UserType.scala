@@ -1,4 +1,4 @@
-package types
+package microservice.types
 
 import akka.cluster.ddata.{Key, PNCounter, ReplicatedData, ReplicatedDataSerialization, SelfUniqueAddress}
 
