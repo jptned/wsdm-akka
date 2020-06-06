@@ -20,9 +20,9 @@ object Stock {
 
   sealed trait StockResponse
   final case class Stock(item_id: String, stock: BigInt, price: Long) extends StockResponse
-  final case class Failed(reason: String) extends StockResponse
-  final case class NotEnoughStock() extends StockResponse
-  final case class Successful() extends StockResponse
+  final case class Failed(reason: String, item_id : String) extends StockResponse
+  final case class NotEnoughStock(item_id: String) extends StockResponse
+  final case class Successful(item_id: String) extends StockResponse
 
   private sealed trait InternalCommand extends Command
   private case class InternalFindResponse(replyTo: ActorRef[StockResponse], rsp: GetResponse[StockType]) extends InternalCommand
@@ -41,7 +41,7 @@ object Stock {
 
       def behavior = Behaviors.receiveMessagePartial(
         receiveFindStock
-          .orElse(reveiveSubtractStock)
+          .orElse(receiveSubtractStock)
           .orElse(receiveAddStock)
           .orElse(receiveCreateStock)
           .orElse(receiveOther)
@@ -61,7 +61,7 @@ object Stock {
           Behaviors.same
 
         case InternalFindResponse(replyTo, NotFound(DataKey, _)) =>
-          replyTo ! Failed("Couldn't find " + DataKey)
+          replyTo ! Failed("Couldn't find " + DataKey, item_id)
           Behaviors.same
 
         case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
@@ -73,7 +73,7 @@ object Stock {
           Behaviors.same
       }
 
-      def reveiveSubtractStock: PartialFunction[Command, Behavior[Command]] = {
+      def receiveSubtractStock: PartialFunction[Command, Behavior[Command]] = {
         case SubtractStock(number, replyTo) =>
           replicator.askUpdate(
             askReplyTo => Update(DataKey, StockType.create(item_id, 0), writeMajority, askReplyTo) {
@@ -108,18 +108,18 @@ object Stock {
 
       def receiveOther: PartialFunction[Command, Behavior[Command]] = {
         case InternalUpdateResponse(replyTo, _: UpdateSuccess[_]) =>
-          replyTo ! Successful()
+          replyTo ! Successful(item_id)
           Behaviors.same
         case InternalUpdateResponse(replyTo, _: UpdateTimeout[_]) =>
           // UpdateTimeout, will eventually be replicated
-          replyTo ! Successful()
+          replyTo ! Successful(item_id)
           Behaviors.same
         case InternalUpdateResponse(replyTo, e: UpdateFailure[a]) =>
           e match {
             case ModifyFailure(_, _, NotEnoughStockException(_, _), _) =>
-              replyTo ! NotEnoughStock()
+              replyTo ! NotEnoughStock(item_id)
             case _ =>
-              replyTo ! Failed("Failure updating " + e)
+              replyTo ! Failed("Failure updating " + e, item_id)
           }
 
           Behaviors.same

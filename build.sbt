@@ -21,5 +21,6 @@ libraryDependencies ++= Seq(
   "com.typesafe.akka" %% "akka-distributed-data" % akkaVersion,
   "com.typesafe.akka" %% "akka-serialization-jackson"  % akkaVersion,
   "org.iq80.leveldb"            % "leveldb"          % "0.7",
-  "org.fusesource.leveldbjni"   % "leveldbjni-all"   % "1.8"
+  "org.fusesource.leveldbjni"   % "leveldbjni-all"   % "1.8",
+  "com.typesafe.play" %% "play-json" % "2.8.1"
 )

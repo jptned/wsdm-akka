@@ -25,7 +25,8 @@ class Webserver(implicit val system:ActorSystem)
 }
 
 object Webserver {
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
+
     implicit val actorSystem: ActorSystem = ActorSystem("rest-server")
     val server = new Webserver()
     server.startServer("localhost",8080)

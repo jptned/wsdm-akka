@@ -16,28 +16,30 @@ import scala.concurrent.duration._
 
 class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit val system: ActorSystem[_]) extends JsonFormats  {
 
-  private implicit lazy val internalTimeout = Timeout(100.milliseconds)
+  private implicit lazy val internalTimeout = Timeout(5000.milliseconds)
   implicit val scheduler = system.scheduler
 
   lazy val orderRoutes: Route =
     pathPrefix("orders") {
       concat(
         path("create" / Segment) { userId =>
-          post {
-            val identifierResponse: Future[OrderCreatedResponse] = orderManager.ask(OrderManager.CreateOrder(userId, _))
+          get {
+            val identifierResponse: Future[Response] = orderManager.ask(OrderManager.CreateOrder(userId, _))
             rejectEmptyResponse {
-              onSuccess(identifierResponse) { response =>
-                complete(response.orderId)
+              onSuccess(identifierResponse) {
+                case OrderCreatedResponse(orderId) => complete(orderId)
+                case _ => complete(StatusCodes.InternalServerError)
               }
             }
           }
         },
         path("find" / Segment) { orderId =>
           get {
-            val maybeOrder: Future[FindOrderResponse] = orderManager.ask(OrderManager.FindOrder(OrderId(orderId), _))
+            val maybeOrder: Future[Response] = orderManager.ask(OrderManager.FindOrder(OrderId(orderId), _))
             rejectEmptyResponse {
-              onSuccess(maybeOrder) { response =>
-                complete(response.order)
+              onSuccess(maybeOrder) {
+                case FindOrderResponse(order) => complete(order)
+                case _ => complete(StatusCodes.InternalServerError)
               }
             }
           }
@@ -48,6 +50,7 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
               case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
+              case _ => complete(StatusCodes.InternalServerError)
             }
           }
         },
@@ -57,6 +60,7 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
               case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
+              case _ => complete(StatusCodes.InternalServerError)
             }
           }
         },
@@ -67,6 +71,7 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
               case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
+              case _ => complete(StatusCodes.InternalServerError)
             }
           }
         },
@@ -77,6 +82,7 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
               onSuccess(operationPerformed) {
                 case OrderRequest.Succeed => complete(StatusCodes.OK)
                 case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
+                case _ => complete(StatusCodes.InternalServerError)
               }
             }
           }
