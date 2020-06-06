@@ -15,7 +15,7 @@ import microservice.Userservice
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 object Webserver
-     {
+{
   sealed trait Message
 
   private final case class StartFailed(cause: Throwable) extends Message
@@ -32,15 +32,16 @@ object Webserver
 
     implicit val materializer: Materializer = Materializer(context.system.toClassic)
     implicit val ec: ExecutionContextExecutor = context.system.executionContext
-    
+
     val userservice: Userservice = new Userservice()
+    val stockservice: Stockservice = new Stockservice()
 
     val serverBinding: Future[Http.ServerBinding] =     Http().bindAndHandle(
       concat(
         userservice.userRoutes,
-//        orderRoutes,
-//        stockRoutes,
-//        paymentRoutes
+        //        orderRoutes,
+        stockservice.stockRoutes,
+        //        paymentRoutes
       ),
       host,
       port
