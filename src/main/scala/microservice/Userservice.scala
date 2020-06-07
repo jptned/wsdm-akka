@@ -3,7 +3,7 @@ package microservice
 import java.util.UUID
 
 import actors.UserActor
-import actors.UserActor.UserResponse
+import actors.UserActor.{User, UserResponse}
 import akka.actor.typed.{ActorRef, ActorSystem, Scheduler}
 import akka.http.scaladsl.server.Directives._
 import akka.actor.typed.scaladsl.ActorContext
@@ -30,9 +30,7 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
           get {
             val id = UUID.randomUUID().toString
             val actor = ct.spawn(UserActor(id), "user-"+id)
-            
             val res = actor.ask(UserActor.CreateUser)
-
             rejectEmptyResponse {
               onSuccess(res) {
                 case UserActor.Successful() =>
@@ -47,21 +45,56 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
         },
         pathPrefix("remove" / LongNumber) { id =>
           delete {
-            val success = true
-            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+            val actor = ct.spawn(UserActor(id.toString), "user-"+id)
+            val res = actor.ask(UserActor.DeleteUser)
+            rejectEmptyResponse {
+              onSuccess(res) {
+                case UserActor.Successful() =>
+                  ct.stop(actor)
+                  val success = true
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+                case _ =>
+                  ct.stop(actor)
+                  val success = false
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+              }
+            }
           }
         },
         pathPrefix("get" / LongNumber) { id =>
           get {
-            val userId = 42
-            val credit = 100
-            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("user_id" -> userId, "credit" -> credit).toString()))
+            val actor = ct.spawn(UserActor(id.toString), "user-"+id)
+            val res = actor.ask(UserActor.FindUser)
+            rejectEmptyResponse {
+              onSuccess(res) {
+                case User(user_id, creditValue) =>
+                  ct.stop(actor)
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("user_id" -> user_id, "credit" -> creditValue).toString()))
+                case _ =>
+                  ct.stop(actor)
+                  complete(StatusCodes.InternalServerError)
+              }
+            }
           }
         },
         pathPrefix("credit" / "subtract" / LongNumber / LongNumber) { (id, amount) =>
           post {
+            val actor = ct.spawn(UserActor(id.toString), "user-"+id)
+            val res = actor.ask(UserActor.SubtractCredit(amount,_))
             val userId = 42
             val credit = 100 - amount
+            rejectEmptyResponse {
+              onSuccess(res) {
+                case UserActor.Successful() =>
+                  ct.stop(actor)
+                  val success = true
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+                case _ =>
+                  ct.stop(actor)
+                  val success = false
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+              }
+            }
             complete(HttpEntity(ContentTypes.`application/json`, Json.obj("user_id" -> userId, "credit" -> credit).toString()))
           }
         },
