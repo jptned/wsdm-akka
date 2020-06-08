@@ -28,7 +28,7 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             rejectEmptyResponse {
               onSuccess(identifierResponse) {
                 case OrderCreatedResponse(orderId) => complete(orderId)
-                case _ => complete(StatusCodes.InternalServerError)
+                case _ => complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -39,8 +39,8 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             rejectEmptyResponse {
               onSuccess(maybeOrder) {
                 case FindOrderResponse(order) => complete(order)
-                case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
-                case _ => complete(StatusCodes.InternalServerError)
+                case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
+                case _ => complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -50,8 +50,8 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             val operationPerformed: Future[Response] = orderManager.ask(OrderManager.RemoveOrder(OrderId(orderId), _))
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
-              case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
-              case _ => complete(StatusCodes.InternalServerError)
+              case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
+              case _ => complete(StatusCodes.BadRequest)
             }
           }
         },
@@ -60,8 +60,8 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             val operationPerformed: Future[Response] = orderManager.ask(OrderManager.AddItemToOrder(OrderId(orderId), itemId, _))
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
-              case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
-              case _ => complete(StatusCodes.InternalServerError)
+              case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
+              case _ => complete(StatusCodes.BadRequest)
             }
           }
         },
@@ -71,8 +71,8 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
               itemId, _))
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
-              case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
-              case _ => complete(StatusCodes.InternalServerError)
+              case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
+              case _ => complete(StatusCodes.BadRequest)
             }
           }
         },
@@ -82,8 +82,8 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             rejectEmptyResponse {
               onSuccess(operationPerformed) {
                 case OrderRequest.Succeed => complete(StatusCodes.OK)
-                case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
-                case _ => complete(StatusCodes.InternalServerError)
+                case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
+                case _ => complete(StatusCodes.BadRequest)
               }
             }
           }

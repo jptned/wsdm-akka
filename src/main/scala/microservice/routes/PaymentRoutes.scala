@@ -24,7 +24,7 @@ class PaymentRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implici
       concat(
         path("pay" / Segment / Segment) { (userId, orderId) =>
           post {
-            complete(StatusCodes.InternalServerError)
+            complete(StatusCodes.BadRequest)
           }
         },
         path("cancel" / Segment / Segment) { (userId, orderId) =>
@@ -33,7 +33,7 @@ class PaymentRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implici
             rejectEmptyResponse {
               onSuccess(maybeOrder) {
                 case FindOrderResponse(order) => complete(order)
-                case _ => complete(StatusCodes.InternalServerError)
+                case _ => complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -43,7 +43,7 @@ class PaymentRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implici
             val operationPerformed: Future[Response] = orderManager.ask(OrderManager.GetPaymentStatus(OrderId(orderId), _))
             onSuccess(operationPerformed) {
               case OrderRequest.PaymentStatus(status) => complete(status)
-              case _ => complete(StatusCodes.InternalServerError)
+              case _ => complete(StatusCodes.BadRequest)
             }
           }
         }
