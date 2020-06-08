@@ -35,13 +35,14 @@ object Webserver
 
     // Creating instances of the different endpoint services.
     val userservice: Userservice = new Userservice()
+    val stockservice: Stockservice = new Stockservice()
 
     val serverBinding: Future[Http.ServerBinding] =     Http().bindAndHandle(
       concat(
         userservice.userRoutes,
+        stockservice.stockRoutes,
 //        These are commented because they need to be reformulated for the new structure, uncomment them when done
 //        orderRoutes,
-//        stockRoutes,
 //        paymentRoutes
       ),
       host,
