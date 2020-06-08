@@ -23,9 +23,9 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
   val stockRoutes: Route =
     pathPrefix("stock") {
       concat(
-        path("find" / LongNumber) { itemId =>
+        path("find" / Segment) { itemId : String =>
           get {
-            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
+            val actor = ct.spawn(Stock(itemId), "stock-"+itemId)
             val res: Future[StockResponse] = actor.ask(Stock.FindStock)
             rejectEmptyResponse {
               onSuccess(res) {
@@ -39,10 +39,9 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
             }
           }
         },
-        path("subtract" / LongNumber / LongNumber) { (itemId, number) =>
+        path("subtract" / Segment / LongNumber) { (itemId : String, number) =>
           post {
-            val success = true
-            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
+            val actor = ct.spawn(Stock(itemId), "stock-"+itemId)
             val res: Future[StockResponse] = actor.ask(Stock.SubtractStock(number, _))
 
             rejectEmptyResponse {
@@ -58,12 +57,11 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
                   complete(StatusCodes.InternalServerError)
               }
             }
-            complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
           }
         },
-        path("add" / LongNumber / LongNumber) { (itemId, number) =>
+        path("add" / Segment / LongNumber) { (itemId : String, number) =>
           post {
-            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
+            val actor = ct.spawn(Stock(itemId), "stock-"+itemId)
             val res: Future[StockResponse] = actor.ask(Stock.AddStock(number, _))
 
             rejectEmptyResponse {
