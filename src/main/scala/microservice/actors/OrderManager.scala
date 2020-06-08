@@ -54,6 +54,12 @@ object OrderManager {
         case CheckoutOrder(orderId, sender) =>
           shardRegion ! OrderRequest.CheckoutOrderRequest(orderId, sender)
           Behaviors.same
+        case GetPaymentStatus(orderId, sender) =>
+          shardRegion ! OrderRequest.GetPaymentStatus(orderId, sender)
+          Behaviors.same
+        case CancelPayment(orderId, userId, sender) =>
+          shardRegion ! OrderRequest.CancelPayment(orderId, userId, sender)
+          Behaviors.same
         case _ => Behaviors.unhandled
       }
 
@@ -67,6 +73,9 @@ object OrderManager {
   case class AddItemToOrder(orderId: OrderId, itemId: String, sender: ActorRef[OrderRequest.Response]) extends ManagerCommand
   case class RemoveItemFromOrder(orderId: OrderId, itemId: String, sender: ActorRef[OrderRequest.Response]) extends ManagerCommand
   case class CheckoutOrder(orderId: OrderId, sender: ActorRef[OrderRequest.Response]) extends ManagerCommand
+
+  case class GetPaymentStatus(orderId: OrderId, sender: ActorRef[OrderRequest.Response]) extends ManagerCommand
+  case class CancelPayment(orderId: OrderId, userId: String, sender: ActorRef[OrderRequest.Response]) extends ManagerCommand
 
   val OrderRequestTypeKey: EntityTypeKey[OrderRequest.Command] = EntityTypeKey[OrderRequest.Command]("OrderRequest")
 

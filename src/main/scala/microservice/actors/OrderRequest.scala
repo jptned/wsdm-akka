@@ -33,6 +33,11 @@ object OrderRequest {
               .persist[Event, State](CreateOrderRequestReceived(id, userId, replyTo)).thenRun { _ =>
               context.log.info("Create a new order.".format(orderId.id))
               replyTo ! OrderCreatedResponse(id)
+            }
+          case FindOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot find the order.".format(orderId.id))
+              replyTo ! Failed("Cannot find the order")
             }.thenStop()
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
@@ -95,8 +100,18 @@ object OrderRequest {
               val userActor = context.spawn(UserActor(process.order.userId), "userActor")
               userActor ! UserActor.SubtractCredit(process.order.totalCost, paymentAdapter)
             }
-         case GracefulStop => Effect.stop[Event, State]
-         case _ => Effect.unhandled
+          // Obtain the payment status
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! PaymentStatus(Status(process.order.paid))
+            }
+          // Cancel the payment
+          case CancelPayment(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! Failed("We have not paid yet.")
+            }
+          case GracefulStop => Effect.stop[Event, State]
+          case _ => Effect.unhandled
         }
       // The state is the PaymentProcess. In this state, we wait for a message from the UserActor to
       // proceed the checkout steps.
@@ -122,6 +137,14 @@ object OrderRequest {
           case FindOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
+            }
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! PaymentStatus(Status(process.order.paid))
+            }
+          case CancelPayment(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! Failed("We have not paid yet.")
             }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
@@ -169,6 +192,18 @@ object OrderRequest {
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! PaymentStatus(Status(process.order.paid))
+            }
+          case CancelPayment(_, _, replyTo) =>
+            Effect.persist[Event, State](CancelPaymentProcessed(replyTo)).thenRun { _ =>
+              Effect.persist(CancelPaymentProcessed(replyTo)).thenRun { _ =>
+                context.log.info("cancel the payment.".format(orderId.id))
+                val userActor = context.spawn(UserActor(process.order.userId), "userActor")
+                userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
+              }
+            }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
@@ -198,6 +233,10 @@ object OrderRequest {
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! PaymentStatus(Status(process.order.paid))
+            }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
@@ -221,9 +260,14 @@ object OrderRequest {
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! PaymentStatus(Status(process.order.paid))
+            }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
+
       case process: OrderProcessed =>
         command match {
           case CheckoutOrderRequest(_, replyTo) =>
@@ -238,6 +282,10 @@ object OrderRequest {
             Effect.persist[Event, State](RemoveOrderRequestReceived).thenRun { _ =>
               replyTo ! Succeed
             }.thenStop()
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              replyTo ! PaymentStatus(Status(process.order.paid))
+            }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
@@ -296,6 +344,8 @@ object OrderRequest {
               StockProcess(process.orderId, process.order, process.expectedResponses, succeedResponses, failedResponses,
                 process.items, process.client)
             }
+          case CancelPaymentProcessed(client) =>
+            RollBackPaymentProcess(process.orderId, process.order, process.items, client)
           case _ => process
         }
 
@@ -314,7 +364,9 @@ object OrderRequest {
       case process: RollBackPaymentProcess =>
         event match {
           case RollBackPaymentProcessed =>
-            OrderProcess(process.orderId, process.order, process.items, process.client)
+            val order = Order(process.orderId, process.order.userId, process.order.items, process.order.totalCost,
+              false: Boolean)
+            OrderProcess(process.orderId, order, process.items, process.client)
           case _ => process
         }
 
@@ -340,6 +392,8 @@ object OrderRequest {
   final case class FindOrderRequest(orderId: OrderId, replyTo: ActorRef[Response]) extends Command
   final case class AddItemToOrderRequest(orderId: OrderId, itemId: String, replyTo: ActorRef[Response]) extends Command
   final case class RemoveItemFromOrderRequest(orderId: OrderId, itemId: String, replyTo: ActorRef[Response]) extends Command
+  final case class GetPaymentStatus(orderId: OrderId, replyTo: ActorRef[Response]) extends Command
+  final case class CancelPayment(orderId: OrderId, userId: String, sender: ActorRef[Response]) extends Command
 
   final case object GracefulStop extends Command {
     // this message is intended to be sent directly from the parent shard, hence the orderId is irrelevant
@@ -348,6 +402,7 @@ object OrderRequest {
 
   case class OrderId(id: String) extends AnyVal
   case class Order(orderId: OrderId, userId: String, var items: List[String], var totalCost: Long, var paid: Boolean)
+  case class Status(paid: Boolean)
 
   sealed trait Event extends CborSerializable
   final case class CreateOrderRequestReceived(orderId: OrderId, userId: String, replyTo: ActorRef[Response]) extends Event
@@ -360,6 +415,7 @@ object OrderRequest {
   final case class StockProcessed(succeedResponses: List[String], failedResponses: List[String]) extends Event
   final case class RollBackStockProcessed(receivedResponses: Int) extends Event
   final case object RollBackPaymentProcessed extends Event
+  final case class CancelPaymentProcessed(replyTo: ActorRef[Response]) extends Event
 
 
   sealed trait State
@@ -383,6 +439,7 @@ object OrderRequest {
   final case class FindOrderResponse(order: Order) extends Response
   case object Succeed extends Response
   final case class Failed(reason: String) extends Response
+  final case class PaymentStatus(paid: Status) extends Response
 
   // internal protocol
   sealed trait InternalMessage extends Command

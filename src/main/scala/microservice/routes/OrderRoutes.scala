@@ -39,6 +39,7 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             rejectEmptyResponse {
               onSuccess(maybeOrder) {
                 case FindOrderResponse(order) => complete(order)
+                case OrderRequest.Failed(reason) => complete(StatusCodes.InternalServerError -> reason)
                 case _ => complete(StatusCodes.InternalServerError)
               }
             }

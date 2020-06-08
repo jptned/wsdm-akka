@@ -1,7 +1,7 @@
 package microservice
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import microservice.actors.OrderRequest.{Order, OrderId}
+import microservice.actors.OrderRequest.{Order, OrderId, Status}
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
 
 trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {
@@ -29,5 +29,12 @@ trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {
     }
   }
 
+  implicit object statusJsonFormat extends RootJsonFormat[Status] {
+    def write(status: Status) = JsObject("paid" -> JsBoolean(status.paid))
+    def read(value: JsValue): Status = value match {
+      case JsBoolean(paid) => Status(paid)
+      case _ => throw DeserializationException("Expected hexadecimal UUID string")
+    }
+  }
 
 }
