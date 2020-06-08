@@ -37,7 +37,7 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("user_id" -> id).toString()))
                 case _ =>
                   ct.stop(actor)
-                  complete(StatusCodes.InternalServerError)
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -69,7 +69,7 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("user_id" -> user_id, "credit" -> creditValue).toString()))
                 case _ =>
                   ct.stop(actor)
-                  complete(StatusCodes.InternalServerError)
+                  complete(StatusCodes.BadRequest)
               }
             }
           }

@@ -34,7 +34,7 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("stock" -> stock, "price" -> price).toString()))
                 case _ =>
                   ct.stop(actor)
-                  complete(StatusCodes.InternalServerError)
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -54,7 +54,7 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
                 case _ =>
                   ct.stop(actor)
-                  complete(StatusCodes.InternalServerError)
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -71,7 +71,7 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
                 case _ =>
                   ct.stop(actor)
-                  complete(StatusCodes.InternalServerError)
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -90,7 +90,7 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("item_id" -> itemId).toString()))
                 case _ =>
                   ct.stop(actor)
-                  complete(StatusCodes.InternalServerError)
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
