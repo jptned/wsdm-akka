@@ -1,14 +1,15 @@
 package microservice
 
 import akka.actor.ActorSystem
+import akka.actor.typed.scaladsl.ActorContext
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity}
 import akka.http.scaladsl.server.Directives.{complete, concat, get, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
-import play.api.libs.json.{JsValue, Json}
-
+import microservice.Webserver.Message
+import play.api.libs.json.Json
 
 trait Paymentservice {
-  implicit val system: ActorSystem
+  implicit val ct: ActorContext[Message]
 
   val paymentRoutes: Route =
     pathPrefix("payment") {

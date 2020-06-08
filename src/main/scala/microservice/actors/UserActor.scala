@@ -66,6 +66,9 @@ object UserActor {
         case InternalDeleteResponse(replyTo, e@ReplicationDeleteFailure(_, _)) =>
           replyTo ! Failed("Failed deleting: " + e)
           Behaviors.same
+        case InternalDeleteResponse(replyTo, DataDeleted(DataKey, _)) =>
+          replyTo ! Failed("Failed deleting: " + DataKey)
+          Behaviors.same
         case InternalDeleteResponse(replyTo, e) =>
           replyTo ! Failed("Failed deleting: " + e)
           Behaviors.same
