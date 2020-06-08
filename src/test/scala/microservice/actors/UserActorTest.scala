@@ -113,6 +113,18 @@ class UserActorTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
       user ! UserActor.CreateUser(probe.ref)
       probe.expectMessage(UserActor.Failed("A deleted key can not be used again: user-" + id))
     }
+
+    "not delete a deleted user" in {
+      val id = IDGenerator.getID()
+      val user = testKit.spawn(UserActor(id))
+      val probe = testKit.createTestProbe[UserActor.UserResponse]()
+      user ! UserActor.CreateUser(probe.ref)
+      probe.expectMessage(UserActor.Successful())
+      user ! UserActor.DeleteUser(probe.ref)
+      probe.expectMessage(UserActor.Successful())
+      user ! UserActor.DeleteUser(probe.ref)
+      probe.expectMessage(UserActor.Failed("Failed deleting: user-" + id))
+    }
   }
   
   "Single user actor" must {
@@ -164,6 +176,11 @@ class UserActorTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
     "not be able to recreate user" in {
       user ! UserActor.CreateUser(probe.ref)
       probe.expectMessage(UserActor.Failed("A deleted key can not be used again: user-" + id))
+    }
+    
+    "not be able to delete user again" in {
+      user ! UserActor.DeleteUser(probe.ref)
+      probe.expectMessage(UserActor.Failed("Failed deleting: user-" + id))
     }
   }
 }

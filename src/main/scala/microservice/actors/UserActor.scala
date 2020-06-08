@@ -62,13 +62,16 @@ object UserActor {
           Behaviors.same
         case InternalDeleteResponse(replyTo, DeleteSuccess(_, _)) =>
           replyTo ! Successful()
-          Behaviors.same
+          Behaviors.stopped
         case InternalDeleteResponse(replyTo, e@ReplicationDeleteFailure(_, _)) =>
           replyTo ! Failed("Failed deleting: " + e)
-          Behaviors.same
+          Behaviors.stopped
+        case InternalDeleteResponse(replyTo, DataDeleted(DataKey, _)) =>
+          replyTo ! Failed("Failed deleting: " + DataKey)
+          Behaviors.stopped
         case InternalDeleteResponse(replyTo, e) =>
           replyTo ! Failed("Failed deleting: " + e)
-          Behaviors.same
+          Behaviors.stopped
       }
 
       def receiveFindUser: PartialFunction[Command, Behavior[Command]] = {
@@ -82,15 +85,15 @@ object UserActor {
         case InternalFindResponse(replyTo, g@GetSuccess(DataKey, _)) =>
           val user = g.get(DataKey)
           replyTo ! User(user.user_id, user.creditValue)
-          Behaviors.same
+          Behaviors.stopped
 
         case InternalFindResponse(replyTo, NotFound(DataKey, _)) =>
           replyTo ! Failed("Couldn't find " + DataKey)
-          Behaviors.same
+          Behaviors.stopped
 
         case InternalFindResponse(replyTo, GetDataDeleted(DataKey, _)) =>
           replyTo ! Failed("Couldn't find " + DataKey)
-          Behaviors.same
+          Behaviors.stopped
 
         case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
           // ReadMajority failure, try again with local read
@@ -137,11 +140,11 @@ object UserActor {
       def receiveOther: PartialFunction[Command, Behavior[Command]] = {
         case InternalUpdateResponse(replyTo, _: UpdateSuccess[_]) =>
           replyTo ! Successful()
-          Behaviors.same
+          Behaviors.stopped
         case InternalUpdateResponse(replyTo, _: UpdateTimeout[_]) =>
           // UpdateTimeout, will eventually be replicated
           replyTo ! Successful()
-          Behaviors.same
+          Behaviors.stopped
         case InternalUpdateResponse(replyTo, e: UpdateFailure[_]) =>
 
           e match {
@@ -151,10 +154,10 @@ object UserActor {
               replyTo ! Failed("Failure updating " + e)
           }
 
-          Behaviors.same
+          Behaviors.stopped
         case InternalUpdateResponse(replyTo, UpdateDataDeleted(DataKey, _)) =>
           replyTo ! Failed("A deleted key can not be used again: " + DataKey)
-          Behaviors.same
+          Behaviors.stopped
       }
 
       behavior
