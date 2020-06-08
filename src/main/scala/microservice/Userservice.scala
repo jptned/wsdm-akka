@@ -50,12 +50,10 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
               onSuccess(res) {
                 case UserActor.Successful() =>
                   ct.stop(actor)
-                  val success = true
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
                 case _ =>
                   ct.stop(actor)
-                  val success = false
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> success).toString()))
+                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
               }
             }
           }
