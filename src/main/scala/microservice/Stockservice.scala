@@ -23,9 +23,9 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
   val stockRoutes: Route =
     pathPrefix("stock") {
       concat(
-        path("find" / Segment) { itemId : String =>
+        path("find" / JavaUUID) { itemId  =>
           get {
-            val actor = ct.spawn(Stock(itemId), "stock-"+itemId)
+            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
             val res: Future[StockResponse] = actor.ask(Stock.FindStock)
             rejectEmptyResponse {
               onSuccess(res) {
@@ -39,9 +39,9 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
             }
           }
         },
-        path("subtract" / Segment / LongNumber) { (itemId : String, number) =>
+        path("subtract" / JavaUUID / LongNumber) { (itemId, number) =>
           post {
-            val actor = ct.spawn(Stock(itemId), "stock-"+itemId)
+            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
             val res: Future[StockResponse] = actor.ask(Stock.SubtractStock(number, _))
 
             rejectEmptyResponse {
@@ -59,9 +59,9 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
             }
           }
         },
-        path("add" / Segment / LongNumber) { (itemId : String, number) =>
+        path("add" / JavaUUID / LongNumber) { (itemId, number) =>
           post {
-            val actor = ct.spawn(Stock(itemId), "stock-"+itemId)
+            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
             val res: Future[StockResponse] = actor.ask(Stock.AddStock(number, _))
 
             rejectEmptyResponse {
