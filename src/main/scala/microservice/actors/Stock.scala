@@ -58,11 +58,11 @@ object Stock {
         case InternalFindResponse(replyTo, g@GetSuccess(DataKey, _)) =>
           val stock = g.get(DataKey)
           replyTo ! Stock(stock.item_id, stock.stockValue, stock.price)
-          Behaviors.same
+          Behaviors.stopped
 
         case InternalFindResponse(replyTo, NotFound(DataKey, _)) =>
           replyTo ! Failed("Couldn't find " + DataKey, item_id)
-          Behaviors.same
+          Behaviors.stopped
 
         case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
           // ReadMajority failure, try again with local read
@@ -109,11 +109,11 @@ object Stock {
       def receiveOther: PartialFunction[Command, Behavior[Command]] = {
         case InternalUpdateResponse(replyTo, _: UpdateSuccess[_]) =>
           replyTo ! Successful(item_id)
-          Behaviors.same
+          Behaviors.stopped
         case InternalUpdateResponse(replyTo, _: UpdateTimeout[_]) =>
           // UpdateTimeout, will eventually be replicated
           replyTo ! Successful(item_id)
-          Behaviors.same
+          Behaviors.stopped
         case InternalUpdateResponse(replyTo, e: UpdateFailure[a]) =>
           e match {
             case ModifyFailure(_, _, NotEnoughStockException(_, _), _) =>
@@ -122,7 +122,7 @@ object Stock {
               replyTo ! Failed("Failure updating " + e, item_id)
           }
 
-          Behaviors.same
+          Behaviors.stopped
       }
 
       behavior

@@ -16,14 +16,14 @@ import scala.concurrent.duration._
 
 class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit val system: ActorSystem[_]) extends JsonFormats  {
 
-  private implicit lazy val internalTimeout = Timeout(5000.milliseconds)
+  private implicit lazy val internalTimeout = Timeout(5000.seconds)
   implicit val scheduler = system.scheduler
 
   lazy val orderRoutes: Route =
     pathPrefix("orders") {
       concat(
         path("create" / Segment) { userId =>
-          get {
+          post {
             val identifierResponse: Future[Response] = orderManager.ask(OrderManager.CreateOrder(userId, _))
             rejectEmptyResponse {
               onSuccess(identifierResponse) {

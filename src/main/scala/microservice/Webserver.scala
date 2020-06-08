@@ -12,6 +12,8 @@ import akka.http.scaladsl.server.Directives._
 import akka.io.Tcp.Message
 import akka.stream.{ActorMaterializer, Materializer}
 import microservice.Userservice
+import microservice.actors.OrderManager
+import microservice.routes.OrderRoutes
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 object Webserver
@@ -37,12 +39,15 @@ object Webserver
     val userservice: Userservice = new Userservice()
     val stockservice: Stockservice = new Stockservice()
 
+    val buildOrderManager = context.spawn(OrderManager(), "OrderManager")
+    val orderRoutes = new OrderRoutes(buildOrderManager)(system)
+
     val serverBinding: Future[Http.ServerBinding] =     Http().bindAndHandle(
       concat(
         userservice.userRoutes,
         stockservice.stockRoutes,
-//        These are commented because they need to be reformulated for the new structure, uncomment them when done
-//        orderRoutes,
+        orderRoutes.orderRoutes,
+        //        These are commented because they need to be reformulated for the new structure, uncomment them when done
 //        paymentRoutes
       ),
       host,

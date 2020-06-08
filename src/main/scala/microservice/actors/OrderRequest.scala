@@ -15,10 +15,6 @@ object OrderRequest {
       AdaptedPaymentResponse(orderId, response)
     }
 
-    val stockRequest: ActorRef[Stock.StockResponse] = context.messageAdapter { response =>
-      RequestedStockResponse(orderId, response)
-    }
-
     val stockAdapter: ActorRef[Stock.StockResponse] = context.messageAdapter { response =>
       AdaptedStockResponse(orderId, response)
     }
@@ -59,8 +55,8 @@ object OrderRequest {
             Effect.persist(AddItemToOrderRequestReceived(itemId, replyTo)).thenRun { _ =>
               context.log.info("Request the price of item " + itemId + " by spawning a stock actor.".format(orderId.id))
               // Spawn a new stock actor, and send a message to the stock actor to obtain the stock price.
-              val stockActor = context.spawn(Stock(itemId), "stock")
-              stockActor ! Stock.FindStock(stockRequest)
+              val stockActor = context.spawn(Stock(itemId), "stock" + itemId)
+              stockActor ! Stock.FindStock(stockAdapter)
             }
           // Remove an item from the order, and send the client a succeed or failed message.
           case RemoveItemFromOrderRequest(_, itemId, replyTo) =>
@@ -77,13 +73,13 @@ object OrderRequest {
               }
             }
           // Receive an AdaptedStockResponse from the stock which includes the stock.
-          case RequestedStockResponse(_, response: Stock.Stock) =>
+          case AdaptedStockResponse(_, response: Stock.Stock) =>
             Effect.persist[Event, State](ItemAddedToOrder(response.item_id, response.price)).thenRun { _ =>
               context.log.info("Received the item price from the stock of item " + response.item_id.format(orderId.id))
               process.client ! Succeed
             }
           // Receive an AdaptedStockResponse from the stock which includes a failed response.
-          case RequestedStockResponse(_, response: Stock.Failed) =>
+          case AdaptedStockResponse(_, response: Stock.Failed) =>
             Effect.none[Event, State].thenRun { _ =>
               context.log.info("Failed to get the item price from the stock".format(orderId.id))
               process.client ! Failed(response.reason)
@@ -92,7 +88,7 @@ object OrderRequest {
           case CheckoutOrderRequest(_, replyTo) =>
             Effect.persist(CheckOutOrderRequestReceived(replyTo)).thenRun { _ =>
               context.log.info("Checkout the order.".format(orderId.id))
-              val userActor = context.spawn(UserActor(process.order.userId), "userActor")
+              val userActor = context.spawn(UserActor(process.order.userId), "userActor" + process.orderId.id)
               userActor ! UserActor.SubtractCredit(process.order.totalCost, paymentAdapter)
             }
          case GracefulStop => Effect.stop[Event, State]
@@ -108,15 +104,20 @@ object OrderRequest {
             Effect.persist[Event, State](PaymentProcessed(process.order.items.length)).thenRun { _ =>
               context.log.info("Receive a succeed message from the user that the payment is succeed.".format(orderId.id))
               process.order.items.foreach { itemId =>
-                val stockActor = context.spawn(Stock(itemId), "stock")
+                val stockActor = context.spawn(Stock(itemId), "stock" + itemId)
                 stockActor ! Stock.SubtractStock(1, stockAdapter)
               }
             }
           // The entity receives a response that the payment is failed, so it sends back a failed message to the client.
           case AdaptedPaymentResponse(_, UserActor.Failed(reason)) =>
-            Effect.none[Event, State].thenRun { _ =>
+            Effect.persist[Event, State](BackToOrderProcess).thenRun { _ =>
               context.log.info(reason.format(orderId.id))
               process.client ! Failed(reason)
+            }.thenStop
+          case AdaptedPaymentResponse(_, UserActor.NotEnoughCredit()) =>
+            Effect.persist[Event, State](BackToOrderProcess).thenRun { _ =>
+              context.log.info("Not enough credit".format(orderId.id))
+              process.client ! Failed("Not enough credit")
             }.thenStop
           case AdaptedPaymentResponse(_, _) => Effect.unhandled
           case FindOrderRequest(_, replyTo) =>
@@ -143,7 +144,7 @@ object OrderRequest {
                 } else if (succeedResponses.length + process.failedResponses.length == process.expectedResponses) {
                   // Entity does not receives all succeed message, so it rolls back the stock process
                   succeedResponses.foreach { itemId =>
-                    val stockActor = context.spawn(Stock(itemId), "stock")
+                    val stockActor = context.spawn(Stock(itemId), "stock" + itemId)
                     stockActor ! Stock.AddStock(1, stockAdapter)
                   }
                 }
@@ -158,9 +159,14 @@ object OrderRequest {
             }.thenRun { _ =>
               // Entity does not receives all succeed message, so it rolls back the stock process
               if (process.succeedResponses.length + failedResponses.length == process.expectedResponses) {
-                process.succeedResponses.foreach { itemId =>
-                  val stockActor = context.spawn(Stock(itemId), "stock")
-                  stockActor ! Stock.AddStock(1, stockAdapter)
+                if (process.succeedResponses.nonEmpty) {
+                  process.succeedResponses.foreach { itemId =>
+                    val stockActor = context.spawn(Stock(itemId), "stock" + itemId)
+                    stockActor ! Stock.AddStock(1, stockAdapter)
+                  }
+                } else {
+                  val userActor = context.spawn(UserActor(process.order.userId), "userActor")
+                  userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
                 }
               }
             }
@@ -190,7 +196,7 @@ object OrderRequest {
           case AdaptedStockResponse(_, response: Stock.Failed) =>
             Effect.none[Event, State].thenRun { _ =>
               context.log.info("Receive a failed message from the stock in the rollback process.".format(orderId.id))
-              val stockActor = context.spawn(Stock(response.item_id), "stock")
+              val stockActor = context.spawn(Stock(response.item_id), "stock" + response.item_id)
               stockActor ! Stock.AddStock(1, stockAdapter)
             }
           case AdaptedStockResponse(_, _) => Effect.unhandled
@@ -279,6 +285,8 @@ object OrderRequest {
         event match {
           case PaymentProcessed(expectedResponses) =>
             StockProcess(process.orderId, process.order, expectedResponses, List(), List(), process.items, process.client)
+          case BackToOrderProcess =>
+            OrderProcess(process.orderId, process.order, process.items, process.client)
           case _ => state
         }
 
@@ -291,7 +299,11 @@ object OrderRequest {
                 true: Boolean)
               OrderProcessed(process.orderId, order)
             } else if (succeedResponses.length + failedResponses.length == process.expectedResponses) {
-              RollBackStockProcess(process.orderId, process.order, succeedResponses.length, 0, process.items, process.client)
+                if (succeedResponses.nonEmpty) {
+                  RollBackStockProcess(process.orderId, process.order, succeedResponses.length, 0, process.items, process.client)
+                } else {
+                  RollBackPaymentProcess(process.orderId, process.order, process.items, process.client)
+                }
             } else {
               StockProcess(process.orderId, process.order, process.expectedResponses, succeedResponses, failedResponses,
                 process.items, process.client)
@@ -360,6 +372,7 @@ object OrderRequest {
   final case class StockProcessed(succeedResponses: List[String], failedResponses: List[String]) extends Event
   final case class RollBackStockProcessed(receivedResponses: Int) extends Event
   final case object RollBackPaymentProcessed extends Event
+  final case object BackToOrderProcess extends Event
 
 
   sealed trait State
