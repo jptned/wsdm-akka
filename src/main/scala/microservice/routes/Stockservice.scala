@@ -1,17 +1,17 @@
-package microservice
+package microservice.routes
 
 import java.util.UUID
 
-import actors.Stock
-import actors.Stock.StockResponse
-import akka.actor.typed.{ActorRef, ActorSystem}
+import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.ActorContext
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, concat, get, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
 import microservice.Webserver.Message
-import akka.actor.typed.scaladsl.AskPattern._
+import microservice.actors.Stock
+import microservice.actors.Stock.StockResponse
 import play.api.libs.json.Json
 
 import scala.concurrent.Future

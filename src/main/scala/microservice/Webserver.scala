@@ -11,9 +11,8 @@ import akka.http.scaladsl.model.headers.Server
 import akka.http.scaladsl.server.Directives._
 import akka.io.Tcp.Message
 import akka.stream.{ActorMaterializer, Materializer}
-import microservice.Userservice
 import microservice.actors.OrderManager
-import microservice.routes.OrderRoutes
+import microservice.routes.{OrderRoutes, Stockservice, Userservice}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 object Webserver
