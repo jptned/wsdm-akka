@@ -10,6 +10,8 @@ import akka.http.scaladsl.Http.ServerBinding
 import akka.http.scaladsl.model.headers.Server
 import akka.http.scaladsl.server.Directives._
 import akka.io.Tcp.Message
+import akka.management.cluster.bootstrap.ClusterBootstrap
+import akka.management.scaladsl.AkkaManagement
 import akka.stream.{ActorMaterializer, Materializer}
 import microservice.Userservice
 import microservice.actors.OrderManager
@@ -80,5 +82,7 @@ object Webserver
 
   def main(args: Array[String]) {
     val system: ActorSystem[Webserver.Message] = ActorSystem(Webserver("127.0.0.1", 8080), "WebServer")
+    AkkaManagement(system).start()
+    ClusterBootstrap(system).start()
   }
 }

@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: wsdm-akka
+  name: wsdm-akka
+  namespace: wsdm-akka-1
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: wsdm-akka
+  template:
+    metadata:
+      labels:
+        app: wsdm-akka
+    spec:
+      containers:
+        - name: wsdm-akka
+          image: akka-sample-cluster-kubernetes-scala:latest
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: management
+          livenessProbe:
+            httpGet:
+              path: /alive
+              port: management
+          ports:
+            - name: management
+              containerPort: 8558
+              protocol: TCP
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          resources:
+            limits:
+              memory: 1024Mi
+              request: 1024Mi
+            requests:
+              cpu: 2
+              memory: 1024Mi

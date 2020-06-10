@@ -1,0 +1,11 @@
+{
+  "kind": "Namespace",
+  "apiVersion": "v1",
+  "metadata": {
+    "name": "wsdm-akka-1",
+    "labels": {
+      "name": "wsdm-akka-1"
+    }
+  }
+}
+
