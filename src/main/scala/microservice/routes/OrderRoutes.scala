@@ -22,9 +22,9 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
   lazy val orderRoutes: Route =
     pathPrefix("orders") {
       concat(
-        path("create" / Segment) { userId =>
+        path("create" / JavaUUID) { userId =>
           post {
-            val identifierResponse: Future[Response] = orderManager.ask(OrderManager.CreateOrder(userId, _))
+            val identifierResponse: Future[Response] = orderManager.ask(OrderManager.CreateOrder(userId.toString, _))
             rejectEmptyResponse {
               onSuccess(identifierResponse) {
                 case OrderCreatedResponse(orderId) => complete(orderId)
@@ -33,9 +33,9 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             }
           }
         },
-        path("find" / Segment) { orderId =>
+        path("find" / JavaUUID) { orderId =>
           get {
-            val maybeOrder: Future[Response] = orderManager.ask(OrderManager.FindOrder(OrderId(orderId), _))
+            val maybeOrder: Future[Response] = orderManager.ask(OrderManager.FindOrder(OrderId(orderId.toString), _))
             rejectEmptyResponse {
               onSuccess(maybeOrder) {
                 case FindOrderResponse(order) => complete(order)
@@ -45,9 +45,9 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             }
           }
         },
-        path("remove" / Segment) { orderId =>
+        path("remove" / JavaUUID) { orderId =>
           delete {
-            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.RemoveOrder(OrderId(orderId), _))
+            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.RemoveOrder(OrderId(orderId.toString), _))
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
               case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
@@ -55,9 +55,9 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             }
           }
         },
-        path("addItem" / Segment / Segment) { (orderId, itemId) =>
+        path("addItem" / JavaUUID / JavaUUID) { (orderId, itemId) =>
           post {
-            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.AddItemToOrder(OrderId(orderId), itemId, _))
+            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.AddItemToOrder(OrderId(orderId.toString), itemId.toString, _))
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
               case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
@@ -65,10 +65,10 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             }
           }
         },
-        path("removeItem" / Segment / Segment) { (orderId, itemId) =>
+        path("removeItem" / JavaUUID / JavaUUID) { (orderId, itemId) =>
           delete {
-            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.RemoveItemFromOrder(OrderId(orderId),
-              itemId, _))
+            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.RemoveItemFromOrder(OrderId(orderId.toString),
+              itemId.toString, _))
             onSuccess(operationPerformed) {
               case OrderRequest.Succeed => complete(StatusCodes.OK)
               case OrderRequest.Failed(reason) => complete(StatusCodes.BadRequest -> reason)
@@ -76,9 +76,9 @@ class OrderRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implicit 
             }
           }
         },
-        path("checkout" / Segment) { orderId =>
+        path("checkout" / JavaUUID) { orderId =>
           post {
-            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.CheckoutOrder(OrderId(orderId), _))
+            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.CheckoutOrder(OrderId(orderId.toString), _))
             rejectEmptyResponse {
               onSuccess(operationPerformed) {
                 case OrderRequest.Succeed => complete(StatusCodes.OK)
