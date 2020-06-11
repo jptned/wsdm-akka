@@ -17,7 +17,11 @@ spec:
     spec:
       containers:
         - name: wsdm-akka
-          image: jptned/wsdm-akka:latest
+          image: asterk/wsdm-akka:latest
+          imagePullPolicy: Never
+          env:
+          - name: MONGO_CONNECTION_STR
+            value: "mongodb://mongodb:27017/wsdm-akka"
           readinessProbe:
             httpGet:
               path: /ready
