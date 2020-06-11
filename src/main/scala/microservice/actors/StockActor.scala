@@ -10,7 +10,7 @@ import microservice.types.{NotEnoughStockException, StockType, StockTypeKey}
 
 import scala.concurrent.duration._
 
-object Stock {
+object StockActor {
 
   sealed trait Command
   final case class FindStock(replyTo: ActorRef[StockResponse]) extends Command
