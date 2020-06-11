@@ -1,9 +1,12 @@
 package microservice.actors
 
 import akka.actor.testkit.typed.scaladsl.ScalaTestWithActorTestKit
+import akka.cluster.ddata.typed.scaladsl.DistributedData
 import org.scalatest.wordspec.AnyWordSpecLike
 
 class StockActorTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
+  implicit val node = DistributedData(testKit.system).selfUniqueAddress
+  
   "Stock" must {
     "create a stock" in {
       var stock = testKit.spawn(StockActor("1"))

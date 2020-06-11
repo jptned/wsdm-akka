@@ -8,7 +8,8 @@ object UserType {
 
 final case class NotEnoughCreditException() extends Exception
 
-final class UserType(val user_id: String, val credit: PNCounter) extends ReplicatedData {
+@SerialVersionUID(1L)
+final class UserType(val user_id: String, val credit: PNCounter) extends ReplicatedData with ReplicatedDataSerialization {
   override type T = UserType
   
   def increment(n: Long)(implicit node: SelfUniqueAddress): UserType = {

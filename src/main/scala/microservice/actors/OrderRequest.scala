@@ -1,7 +1,8 @@
 package microservice.actors
 
-import akka.actor.typed.{ActorRef, Behavior}
 import akka.actor.typed.scaladsl.Behaviors
+import akka.actor.typed.{ActorRef, Behavior}
+import akka.cluster.ddata.SelfUniqueAddress
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import microservice.CborSerializable
@@ -9,7 +10,7 @@ import microservice.CborSerializable
 
 object OrderRequest {
 
-  def apply(orderId: OrderId, persistenceId: PersistenceId): Behavior[Command] = Behaviors.setup { context =>
+  def apply(orderId: OrderId, persistenceId: PersistenceId)(implicit node: SelfUniqueAddress): Behavior[Command] = Behaviors.setup { context =>
 
     val paymentAdapter: ActorRef[UserActor.UserResponse] = context.messageAdapter { response =>
       AdaptedPaymentResponse(orderId, response)

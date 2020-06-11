@@ -4,6 +4,7 @@ import java.util.UUID
 
 import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
+import akka.cluster.ddata.SelfUniqueAddress
 import akka.cluster.sharding.typed.HashCodeNoEnvelopeMessageExtractor
 import akka.cluster.sharding.typed.scaladsl.{ClusterSharding, Entity, EntityTypeKey}
 import akka.persistence.typed.PersistenceId
@@ -11,7 +12,7 @@ import microservice.actors.OrderRequest.OrderId
 
 object OrderManager {
 
-  def apply(): Behavior[ManagerCommand] =
+  def apply()(implicit node: SelfUniqueAddress): Behavior[ManagerCommand] =
     Behaviors.setup[ManagerCommand] { context =>
       // initialize the shading extension
       val sharding = ClusterSharding(context.system)

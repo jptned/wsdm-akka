@@ -2,6 +2,7 @@
 package microservice.actors
 
 import akka.actor.testkit.typed.scaladsl.{ActorTestKit, ScalaTestWithActorTestKit}
+import akka.cluster.ddata.typed.scaladsl.DistributedData
 import org.scalatest.wordspec.AnyWordSpecLike
 
 object IDGenerator {
@@ -14,6 +15,8 @@ object IDGenerator {
 }
 
 class UserActorTest extends ScalaTestWithActorTestKit with AnyWordSpecLike {
+  implicit val node = DistributedData(testKit.system).selfUniqueAddress
+  
   "User" must {
     "create a user" in {
       val id = IDGenerator.getID

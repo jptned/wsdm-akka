@@ -4,7 +4,7 @@ import akka.actor.typed.scaladsl.Behaviors
 import akka.actor.typed.{ActorRef, Behavior}
 import akka.cluster.ddata.Replicator._
 import akka.cluster.ddata.typed.scaladsl.DistributedData
-import akka.cluster.ddata.typed.scaladsl.Replicator.{Delete, DeleteFailure, Get, Update}
+import akka.cluster.ddata.typed.scaladsl.Replicator.{Delete, Get, Update}
 import akka.cluster.ddata.{ReplicatedData, SelfUniqueAddress}
 import microservice.types.{NotEnoughCreditException, UserType, UserTypeKey}
 
@@ -34,14 +34,12 @@ object UserActor {
   private case class InternalDeleteResponse[A <: ReplicatedData](replyTo: ActorRef[UserResponse], rsp: DeleteResponse[A]) extends InternalCommand
   private case class InternalCreateResponse(replyTo: ActorRef[UserResponse], getResponse: GetResponse[UserType]) extends InternalCommand
 
-  private val timeout = 3.seconds
+  private val timeout = 100.millis
   private val readMajority = ReadMajority(timeout)
   private val writeMajority = WriteMajority(timeout)
 
-  def apply(user_id: String): Behavior[Command] = Behaviors.setup { context =>
+  def apply(user_id: String)(implicit node: SelfUniqueAddress): Behavior[Command] = Behaviors.setup { context =>
     DistributedData.withReplicatorMessageAdapter[Command, UserType] { replicator =>
-      implicit val node: SelfUniqueAddress = DistributedData(context.system).selfUniqueAddress
-
       val DataKey = UserTypeKey("user-" + user_id)
 
       def behavior = Behaviors.receiveMessagePartial(
@@ -80,14 +78,6 @@ object UserActor {
           val user = g.get(DataKey)
           replyTo ! User(user.user_id, user.creditValue)
           Behaviors.stopped
-
-        case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
-          // ReadMajority failure, try again with local read
-          replicator.askGet(
-            askReplyTo => Get(DataKey, ReadLocal, askReplyTo),
-            rsp => InternalFindResponse(replyTo, rsp))
-
-          Behaviors.same
 
         case InternalFindResponse(replyTo, _) =>
           replyTo ! Failed("Couldn't find " + DataKey)

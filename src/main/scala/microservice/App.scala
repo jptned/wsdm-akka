@@ -3,6 +3,7 @@ package microservice
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.{ActorContext, Behaviors}
 import akka.cluster.ClusterEvent
+import akka.cluster.ddata.typed.scaladsl.DistributedData
 import akka.cluster.typed.{Cluster, Subscribe}
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.server.Directives._
@@ -28,6 +29,7 @@ object App extends App {
     val cluster = Cluster(context.system)
     context.log.info("Started [" + context.system + "], cluster.selfAddress = " + cluster.selfMember.address + ")")
 
+    implicit val node = DistributedData(context.system).selfUniqueAddress
     val userservice: UserService = new UserService()
     val stockservice: StockService = new StockService()
 

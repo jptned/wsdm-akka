@@ -29,14 +29,12 @@ object StockActor {
   private case class InternalUpdateResponse[A <: ReplicatedData](replyTo: ActorRef[StockResponse], rsp: UpdateResponse[A]) extends InternalCommand
   private case class InternalCreateResponse(replyTo: ActorRef[StockResponse], getResponse: GetResponse[StockType]) extends InternalCommand
 
-  private val timeout = 3.seconds
+  private val timeout = 100.millis
   private val readMajority = ReadMajority(timeout)
   private val writeMajority = WriteMajority(timeout)
 
-  def apply(item_id: String): Behavior[Command] = Behaviors.setup { context =>
+  def apply(item_id: String)(implicit node: SelfUniqueAddress): Behavior[Command] = Behaviors.setup { context =>
     DistributedData.withReplicatorMessageAdapter[Command, StockType] { replicator =>
-      implicit val node: SelfUniqueAddress = DistributedData(context.system).selfUniqueAddress
-
       val DataKey = StockTypeKey("stock-" + item_id)
 
       def behavior = Behaviors.receiveMessagePartial(

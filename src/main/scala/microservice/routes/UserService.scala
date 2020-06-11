@@ -5,6 +5,7 @@ import java.util.UUID
 import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.ActorContext
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.cluster.ddata.SelfUniqueAddress
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, concat, delete, get, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
@@ -17,7 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class UserService(implicit system: ActorSystem[_], implicit val ct: ActorContext[Nothing]) {
+class UserService(implicit val system: ActorSystem[_], implicit val ct: ActorContext[Nothing], implicit val node: SelfUniqueAddress) {
   implicit val timeout: Timeout = Timeout(5000.millis)
 
   val userRoutes: Route =
