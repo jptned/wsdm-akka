@@ -9,7 +9,6 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, concat, delete, get, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import microservice.Webserver.Message
 import microservice.actors.UserActor
 import microservice.actors.UserActor.{User, UserResponse}
 import play.api.libs.json.Json
@@ -18,7 +17,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class UserService(implicit system: ActorSystem[_], implicit val ct: ActorContext[Message]) {
+class UserService(implicit system: ActorSystem[_], implicit val ct: ActorContext[Nothing]) {
   implicit val timeout: Timeout = Timeout(5000.millis)
 
   val userRoutes: Route =
