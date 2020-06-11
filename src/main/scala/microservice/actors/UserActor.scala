@@ -63,14 +63,8 @@ object UserActor {
         case InternalDeleteResponse(replyTo, DeleteSuccess(_, _)) =>
           replyTo ! Successful()
           Behaviors.stopped
-        case InternalDeleteResponse(replyTo, e@ReplicationDeleteFailure(_, _)) =>
-          replyTo ! Failed("Failed deleting: " + e)
-          Behaviors.stopped
-        case InternalDeleteResponse(replyTo, DataDeleted(DataKey, _)) =>
-          replyTo ! Failed("Failed deleting: " + DataKey)
-          Behaviors.stopped
         case InternalDeleteResponse(replyTo, e) =>
-          replyTo ! Failed("Failed deleting: " + e)
+          replyTo ! Failed("Failed deleting: " + e.key)
           Behaviors.stopped
       }
 
@@ -87,14 +81,6 @@ object UserActor {
           replyTo ! User(user.user_id, user.creditValue)
           Behaviors.stopped
 
-        case InternalFindResponse(replyTo, NotFound(DataKey, _)) =>
-          replyTo ! Failed("Couldn't find " + DataKey)
-          Behaviors.stopped
-
-        case InternalFindResponse(replyTo, GetDataDeleted(DataKey, _)) =>
-          replyTo ! Failed("Couldn't find " + DataKey)
-          Behaviors.stopped
-
         case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
           // ReadMajority failure, try again with local read
           replicator.askGet(
@@ -102,13 +88,18 @@ object UserActor {
             rsp => InternalFindResponse(replyTo, rsp))
 
           Behaviors.same
+
+        case InternalFindResponse(replyTo, _) =>
+          replyTo ! Failed("Couldn't find " + DataKey)
+          Behaviors.stopped
       }
 
       def reveiveSubtractCredit: PartialFunction[Command, Behavior[Command]] = {
         case SubtractCredit(number, replyTo) =>
           replicator.askUpdate(
-            askReplyTo => Update(DataKey, UserType.create(user_id), writeMajority, askReplyTo) {
-              user => user.decrement(number)
+            askReplyTo => Update(DataKey, writeMajority, askReplyTo) {
+              case Some(user) => user.decrement(number)
+              case None => throw new Exception("User does not exist")
             },
             rsp => InternalUpdateResponse(replyTo, rsp))
 
@@ -118,8 +109,9 @@ object UserActor {
       def receiveAddCredit: PartialFunction[Command, Behavior[Command]] = {
         case AddCredit(number, replyTo) =>
           replicator.askUpdate(
-            askReplyTo => Update(DataKey, UserType.create(user_id), writeMajority, askReplyTo) {
-              user => user.increment(number)
+            askReplyTo => Update(DataKey, writeMajority, askReplyTo) {
+              case Some(user) => user.increment(number)
+              case None => throw new Exception("User does not exist")
             },
             rsp => InternalUpdateResponse(replyTo, rsp))
 
@@ -129,8 +121,9 @@ object UserActor {
       def receiveCreateUser: PartialFunction[Command, Behavior[Command]] = {
         case CreateUser(replyTo) =>
           replicator.askUpdate(
-            askReplyTo => Update(DataKey, UserType.create(user_id), writeMajority, askReplyTo) {
-              user => user
+            askReplyTo => Update(DataKey, writeMajority, askReplyTo) {
+              case Some(_) => throw new Exception("User already exists")
+              case None => UserType.create(user_id)
             },
             rsp => InternalUpdateResponse(replyTo, rsp))
 
