@@ -32,9 +32,35 @@ object OrderRequest {
             }
           case FindOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
-              context.log.info("Cannot find the order.".format(orderId.id))
+              context.log.info("Cannot find the order in empty process.".format(orderId.id))
               replyTo ! Failed("Cannot find the order")
             }.thenStop()
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in empty process.".format(orderId.id))
+              replyTo ! PaymentStatus(Status(false))
+            }.thenStop()
+          case CancelPayment(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in empty process.".format(orderId.id))
+              replyTo ! Failed("We have not paid yet.")
+            }.thenStop()
+          case RemoveOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove the order in empty process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove the order")
+            }.thenStop()
+          case AddItemToOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot add an item to the order in empty process.".format(orderId.id))
+              replyTo ! Failed("Cannot add an item to the order.")
+            }.thenStop()
+          case RemoveItemFromOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove an item from the order in empty process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove an item from the order.")
+            }.thenStop()
+          case CheckoutOrderRequest(_, _) => Effect.none[Event, State]
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
