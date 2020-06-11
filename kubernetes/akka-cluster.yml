@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: wsdm-akka
-          image: asterk/wsdm-akka:latest
+          image: jptned/wsdm-akka:latest
           imagePullPolicy: Never
           env:
           - name: MONGO_CONNECTION_STR
