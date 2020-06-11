@@ -10,7 +10,7 @@ import microservice.types.{NotEnoughStockException, StockType, StockTypeKey}
 
 import scala.concurrent.duration._
 
-object Stock {
+object StockActor {
 
   sealed trait Command
   final case class FindStock(replyTo: ActorRef[StockResponse]) extends Command
@@ -64,6 +64,10 @@ object Stock {
           replyTo ! Failed("Couldn't find " + DataKey, item_id)
           Behaviors.stopped
 
+        case InternalFindResponse(replyTo, e) =>
+          replyTo ! Failed("Couldn't find " + e, item_id)
+          Behaviors.stopped
+
         case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
           // ReadMajority failure, try again with local read
           replicator.askGet(
@@ -76,8 +80,9 @@ object Stock {
       def receiveSubtractStock: PartialFunction[Command, Behavior[Command]] = {
         case SubtractStock(number, replyTo) =>
           replicator.askUpdate(
-            askReplyTo => Update(DataKey, StockType.create(item_id, 0), writeMajority, askReplyTo) {
-              stock => stock.decrement(number)
+            askReplyTo => Update(DataKey, writeMajority, askReplyTo) {
+              case Some(stock) => stock.decrement(number)
+              case None => throw new Exception("Stock does not exist")
             },
             rsp => InternalUpdateResponse(replyTo, rsp))
 
@@ -87,8 +92,9 @@ object Stock {
       def receiveAddStock: PartialFunction[Command, Behavior[Command]] = {
         case AddStock(number, replyTo) =>
           replicator.askUpdate(
-            askReplyTo => Update(DataKey, StockType.create(item_id, 0), writeMajority, askReplyTo) {
-              stock => stock.increment(number)
+            askReplyTo => Update(DataKey, writeMajority, askReplyTo) {
+              case Some(stock) => stock.increment(number)
+              case None => throw new Exception("Stock does not exist")
             },
             rsp => InternalUpdateResponse(replyTo, rsp))
 
@@ -98,8 +104,9 @@ object Stock {
       def receiveCreateStock: PartialFunction[Command, Behavior[Command]] = {
         case CreateStock(price, replyTo) =>
           replicator.askUpdate(
-            askReplyTo => Update(DataKey, StockType.create(item_id, price), writeMajority, askReplyTo) {
-              stock => stock
+            askReplyTo => Update(DataKey, writeMajority, askReplyTo) {
+              case Some(_) => throw new Exception("Stock already exists")
+              case None => StockType.create(item_id, price)
             },
             rsp => InternalUpdateResponse(replyTo, rsp))
 

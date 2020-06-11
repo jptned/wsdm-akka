@@ -1,25 +1,24 @@
-package microservice
+package microservice.routes
 
 import java.util.UUID
 
-import actors.UserActor
-import actors.UserActor.{User, UserResponse}
 import akka.actor.typed.ActorSystem
-import akka.http.scaladsl.server.Directives._
 import akka.actor.typed.scaladsl.ActorContext
-import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
-import akka.http.scaladsl.server.Directives.{complete, concat, delete, get, path, pathPrefix, post}
-import akka.http.scaladsl.server.Route
-import microservice.Webserver.Message
-import play.api.libs.json.Json
 import akka.actor.typed.scaladsl.AskPattern._
+import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
+import akka.http.scaladsl.server.Directives.{complete, concat, delete, get, path, pathPrefix, post, _}
+import akka.http.scaladsl.server.Route
 import akka.util.Timeout
+import microservice.Webserver.Message
+import microservice.actors.UserActor
+import microservice.actors.UserActor.{User, UserResponse}
+import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext[Message]) {
+class UserService(implicit system: ActorSystem[_], implicit val ct: ActorContext[Message]) {
   implicit val timeout: Timeout = Timeout(5000.millis)
 
   val userRoutes: Route =
@@ -50,10 +49,10 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
               onSuccess(res) {
                 case UserActor.Successful() =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
+                  complete(StatusCodes.OK)
                 case _ =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -82,10 +81,10 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
               onSuccess(res) {
                 case UserActor.Successful() =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
+                  complete(StatusCodes.OK)
                 case _ =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -98,10 +97,10 @@ class Userservice(implicit system: ActorSystem[_], implicit val ct: ActorContext
               onSuccess(res) {
                 case UserActor.Successful() =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
+                  complete(StatusCodes.OK)
                 case _ =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
