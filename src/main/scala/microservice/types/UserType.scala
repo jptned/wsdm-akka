@@ -1,6 +1,6 @@
 package microservice.types
 
-import akka.cluster.ddata.{Key, PNCounter, ReplicatedData, ReplicatedDataSerialization, SelfUniqueAddress}
+import akka.cluster.ddata._
 
 object UserType {
   def create(user_id: String) : UserType = new UserType(user_id, PNCounter.empty)
@@ -32,3 +32,4 @@ final class UserType(val user_id: String, val credit: PNCounter) extends Replica
 
 @SerialVersionUID(1L)
 final case class UserTypeKey(_id: String) extends Key[UserType](_id) with ReplicatedDataSerialization
+
