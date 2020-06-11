@@ -11,7 +11,7 @@ import akka.management.javadsl.AkkaManagement
 import akka.stream.Materializer
 import akka.{actor => classic}
 import microservice.actors.OrderManager
-import microservice.routes.OrderRoutes
+import microservice.routes.{OrderRoutes, PaymentRoutes, StockService, UserService}
 
 import scala.concurrent.ExecutionContextExecutor
 
@@ -28,23 +28,23 @@ object App extends App {
     val cluster = Cluster(context.system)
     context.log.info("Started [" + context.system + "], cluster.selfAddress = " + cluster.selfMember.address + ")")
 
-    val userservice: Userservice = new Userservice()
-    val stockservice: Stockservice = new Stockservice()
+    val userservice: UserService = new UserService()
+    val stockservice: StockService = new StockService()
 
     val buildOrderManager = context.spawn(OrderManager(), "OrderManager")
     val orderRoutes = new OrderRoutes(buildOrderManager)(context.system)
+    val paymentRoutes = new PaymentRoutes(buildOrderManager)(context.system)
 
     Http().bindAndHandle(concat(
       userservice.userRoutes,
       stockservice.stockRoutes,
       orderRoutes.orderRoutes,
-      //        These are commented because they need to be reformulated for the new structure, uncomment them when done
-      //        paymentRoutes
+      paymentRoutes.paymentRoutes,
     ), "0.0.0.0", 8080)
 
     // Create an actor that handles cluster domain events
     val listener = context.spawn(Behaviors.receiveMessage[ClusterEvent.MemberEvent] {
-      case event: ClusterEvent.MemberEvent =>
+      event: ClusterEvent.MemberEvent =>
         context.log.info("MemberEvent: {}", event)
         Behaviors.same
     }, "listener")

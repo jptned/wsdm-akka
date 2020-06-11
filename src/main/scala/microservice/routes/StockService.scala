@@ -1,22 +1,23 @@
-package microservice
+package microservice.routes
 
 import java.util.UUID
 
-import actors.Stock
-import actors.Stock.StockResponse
-import akka.actor.typed.{ActorRef, ActorSystem}
+import akka.actor.typed.ActorSystem
 import akka.actor.typed.scaladsl.ActorContext
+import akka.actor.typed.scaladsl.AskPattern._
 import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, concat, get, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import akka.actor.typed.scaladsl.AskPattern._
+import microservice.Webserver.Message
+import microservice.actors.StockActor
+import microservice.actors.StockActor.StockResponse
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContext[Nothing]) {
+class StockService(implicit system: ActorSystem[_], implicit val ct: ActorContext[Message]) {
   implicit val timeout: Timeout = Timeout(5000.millis)
 
   val stockRoutes: Route =
@@ -24,11 +25,11 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
       concat(
         path("find" / JavaUUID) { itemId  =>
           get {
-            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
-            val res: Future[StockResponse] = actor.ask(Stock.FindStock)
+            val actor = ct.spawn(StockActor(itemId.toString), "stock-"+itemId)
+            val res: Future[StockResponse] = actor.ask(StockActor.FindStock)
             rejectEmptyResponse {
               onSuccess(res) {
-                case Stock.Stock(item_id: String, stock: BigInt, price: Long) =>
+                case StockActor.Stock(item_id: String, stock: BigInt, price: Long) =>
                   ct.stop(actor)
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("stock" -> stock, "price" -> price).toString()))
                 case _ =>
@@ -40,17 +41,17 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
         },
         path("subtract" / JavaUUID / LongNumber) { (itemId, number) =>
           post {
-            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
-            val res: Future[StockResponse] = actor.ask(Stock.SubtractStock(number, _))
+            val actor = ct.spawn(StockActor(itemId.toString), "stock-"+itemId)
+            val res: Future[StockResponse] = actor.ask(StockActor.SubtractStock(number, _))
 
             rejectEmptyResponse {
               onSuccess(res) {
-                case Stock.Successful(_) =>
+                case StockActor.Successful(_) =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
-                case Stock.NotEnoughStock(_) =>
+                  complete(StatusCodes.OK)
+                case StockActor.NotEnoughStock(_) =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
+                  complete(StatusCodes.BadRequest)
                 case _ =>
                   ct.stop(actor)
                   complete(StatusCodes.BadRequest)
@@ -60,14 +61,14 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
         },
         path("add" / JavaUUID / LongNumber) { (itemId, number) =>
           post {
-            val actor = ct.spawn(Stock(itemId.toString), "stock-"+itemId)
-            val res: Future[StockResponse] = actor.ask(Stock.AddStock(number, _))
+            val actor = ct.spawn(StockActor(itemId.toString), "stock-"+itemId)
+            val res: Future[StockResponse] = actor.ask(StockActor.AddStock(number, _))
 
             rejectEmptyResponse {
               onSuccess(res) {
-                case Stock.Successful(_) =>
+                case StockActor.Successful(_) =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
+                  complete(StatusCodes.OK)
                 case _ =>
                   ct.stop(actor)
                   complete(StatusCodes.BadRequest)
@@ -79,12 +80,12 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
           post {
             val itemId = UUID.randomUUID().toString
 
-            val actor = ct.spawn(Stock(itemId), "stock-"+itemId)
-            val res: Future[StockResponse] = actor.ask(Stock.CreateStock(price, _))
+            val actor = ct.spawn(StockActor(itemId), "stock-"+itemId)
+            val res: Future[StockResponse] = actor.ask(StockActor.CreateStock(price, _))
 
             rejectEmptyResponse {
               onSuccess(res) {
-                case Stock.Successful(_) =>
+                case StockActor.Successful(_) =>
                   ct.stop(actor)
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("item_id" -> itemId).toString()))
                 case _ =>
