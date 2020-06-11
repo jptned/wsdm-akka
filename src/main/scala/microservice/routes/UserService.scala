@@ -49,10 +49,10 @@ class UserService(implicit system: ActorSystem[_], implicit val ct: ActorContext
               onSuccess(res) {
                 case UserActor.Successful() =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
+                  complete(StatusCodes.OK)
                 case _ =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -81,10 +81,10 @@ class UserService(implicit system: ActorSystem[_], implicit val ct: ActorContext
               onSuccess(res) {
                 case UserActor.Successful() =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
+                  complete(StatusCodes.OK)
                 case _ =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
@@ -97,10 +97,10 @@ class UserService(implicit system: ActorSystem[_], implicit val ct: ActorContext
               onSuccess(res) {
                 case UserActor.Successful() =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
+                  complete(StatusCodes.OK)
                 case _ =>
                   ct.stop(actor)
-                  complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
+                  complete(StatusCodes.BadRequest)
               }
             }
           }
