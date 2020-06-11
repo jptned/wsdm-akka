@@ -46,10 +46,10 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
 
             rejectEmptyResponse {
               onSuccess(res) {
-                case Stock.Successful() =>
+                case Stock.Successful(_) =>
                   ct.stop(actor)
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
-                case Stock.NotEnoughStock() =>
+                case Stock.NotEnoughStock(_) =>
                   ct.stop(actor)
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> false).toString()))
                 case _ =>
@@ -66,7 +66,7 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
 
             rejectEmptyResponse {
               onSuccess(res) {
-                case Stock.Successful() =>
+                case Stock.Successful(_) =>
                   ct.stop(actor)
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("success" -> true).toString()))
                 case _ =>
@@ -85,7 +85,7 @@ class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContex
 
             rejectEmptyResponse {
               onSuccess(res) {
-                case Stock.Successful() =>
+                case Stock.Successful(_) =>
                   ct.stop(actor)
                   complete(HttpEntity(ContentTypes.`application/json`, Json.obj("item_id" -> itemId).toString()))
                 case _ =>
