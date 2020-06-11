@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: wsdm-akka
-          image: wsdm-akka:latest
+          image: jptned/wsdm-akka:latest
           readinessProbe:
             httpGet:
               path: /ready
@@ -35,10 +35,10 @@ spec:
               protocol: TCP
           resources:
             limits:
-              memory: 1024Mi
+              memory: 256Mi
             requests:
-              cpu: 2
-              memory: 1024Mi
+              cpu: 0.2
+              memory: 256Mi
 ---
 kind: Role
 apiVersion: rbac.authorization.k8s.io/v1
