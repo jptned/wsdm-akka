@@ -1,6 +1,6 @@
 name := "wsdm-akka"
 
-version := "1.0"
+version := "1.2"
 
 scalaVersion := "2.13.1"
 
@@ -33,10 +33,10 @@ libraryDependencies ++= Seq(
 )
 
 enablePlugins(JavaAppPackaging, DockerPlugin)
-mainClass in Compile := Some("microservice.Webserver")
+mainClass in Compile := Some("microservice.App")
 
 dockerBaseImage := "adoptopenjdk:11-jre-hotspot"
 dockerUpdateLatest := true
-dockerUsername := sys.props.get("docker.username")
-dockerRepository := sys.props.get("docker.registry")
+dockerUsername := Option("jptned")
+//dockerRepository := Option("wsdm-akka")
 dockerExposedPorts := Seq(8080, 8558, 25520)

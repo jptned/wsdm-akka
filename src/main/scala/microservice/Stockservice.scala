@@ -10,14 +10,13 @@ import akka.http.scaladsl.model.{ContentTypes, HttpEntity, StatusCodes}
 import akka.http.scaladsl.server.Directives.{complete, concat, get, path, pathPrefix, post, _}
 import akka.http.scaladsl.server.Route
 import akka.util.Timeout
-import microservice.Webserver.Message
 import akka.actor.typed.scaladsl.AskPattern._
 import play.api.libs.json.Json
 
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContext[Message]) {
+class Stockservice(implicit system: ActorSystem[_], implicit val ct: ActorContext[Nothing]) {
   implicit val timeout: Timeout = Timeout(5000.millis)
 
   val stockRoutes: Route =
