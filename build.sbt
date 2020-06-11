@@ -25,6 +25,7 @@ libraryDependencies ++= Seq(
   "org.iq80.leveldb"            % "leveldb"          % "0.7",
   "org.fusesource.leveldbjni"   % "leveldbjni-all"   % "1.8",
   "com.typesafe.play" %% "play-json" % "2.8.1",
+  "com.typesafe.akka" %% "akka-discovery" % akkaVersion,
   "com.lightbend.akka.management" %% "akka-management" % "1.0.8",
   "com.lightbend.akka.management" %% "akka-management-cluster-http" % "1.0.8",
   "com.lightbend.akka.management" %% "akka-management-cluster-bootstrap" % "1.0.8",

@@ -6,7 +6,7 @@ metadata:
   name: wsdm-akka
   namespace: wsdm-akka-1
 spec:
-  replicas: 2
+  replicas: 3
   selector:
     matchLabels:
       app: wsdm-akka
@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: wsdm-akka
-          image: akka-sample-cluster-kubernetes-scala:latest
+          image: wsdm-akka:latest
           readinessProbe:
             httpGet:
               path: /ready
@@ -36,7 +36,43 @@ spec:
           resources:
             limits:
               memory: 1024Mi
-              request: 1024Mi
             requests:
               cpu: 2
               memory: 1024Mi
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: pod-reader
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "watch", "list"]
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: read-pods
+subjects:
+  - kind: User
+    name: system:serviceaccount:wsdm-akka-1:default
+roleRef:
+  kind: Role
+  name: pod-reader
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: wsdm-akka
+  name: "wsdm-akka-http"
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: "wsdm-akka"
+  type: LoadBalancer

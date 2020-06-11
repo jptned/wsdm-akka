@@ -81,7 +81,7 @@ object Webserver
   }
 
   def main(args: Array[String]) {
-    val system: ActorSystem[Webserver.Message] = ActorSystem(Webserver("127.0.0.1", 8080), "WebServer")
+    val system: ActorSystem[Webserver.Message] = ActorSystem(Webserver("127.0.0.1", 8080), "wsdm-akka")
     AkkaManagement(system).start()
     ClusterBootstrap(system).start()
   }
