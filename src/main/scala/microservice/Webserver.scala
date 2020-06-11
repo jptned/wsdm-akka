@@ -11,9 +11,8 @@ import akka.http.scaladsl.model.headers.Server
 import akka.http.scaladsl.server.Directives._
 import akka.io.Tcp.Message
 import akka.stream.{ActorMaterializer, Materializer}
-import microservice.Userservice
 import microservice.actors.OrderManager
-import microservice.routes.OrderRoutes
+import microservice.routes.{OrderRoutes, StockService, UserService}
 
 import scala.concurrent.{ExecutionContextExecutor, Future}
 object Webserver
@@ -36,8 +35,8 @@ object Webserver
     implicit val ec: ExecutionContextExecutor = context.system.executionContext
 
     // Creating instances of the different endpoint services.
-    val userservice: Userservice = new Userservice()
-    val stockservice: Stockservice = new Stockservice()
+    val userservice: UserService = new UserService()
+    val stockservice: StockService = new StockService()
 
     val buildOrderManager = context.spawn(OrderManager(), "OrderManager")
     val orderRoutes = new OrderRoutes(buildOrderManager)(system)
