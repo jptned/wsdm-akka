@@ -22,25 +22,19 @@ class PaymentRoutes(orderManager: ActorRef[OrderManager.ManagerCommand])(implici
   lazy val paymentRoutes: Route =
     pathPrefix("payment") {
       concat(
-        path("pay" / Segment / Segment) { (userId, orderId) =>
+        path("pay" / JavaUUID / JavaUUID) { (userId, orderId) =>
           post {
             complete(StatusCodes.BadRequest)
           }
         },
-        path("cancel" / Segment / Segment) { (userId, orderId) =>
+        path("cancel" / JavaUUID / JavaUUID) { (userId, orderId) =>
           post {
-            val maybeOrder: Future[Response] = orderManager.ask(OrderManager.CancelPayment(OrderId(orderId), userId, _))
-            rejectEmptyResponse {
-              onSuccess(maybeOrder) {
-                case FindOrderResponse(order) => complete(order)
-                case _ => complete(StatusCodes.BadRequest)
-              }
-            }
+            complete(StatusCodes.BadRequest)
           }
         },
-        path("status" / Segment) { orderId =>
+        path("status" / JavaUUID) { orderId =>
           get {
-            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.GetPaymentStatus(OrderId(orderId), _))
+            val operationPerformed: Future[Response] = orderManager.ask(OrderManager.GetPaymentStatus(OrderId(orderId.toString), _))
             onSuccess(operationPerformed) {
               case OrderActor.PaymentStatus(status) => complete(status)
               case _ => complete(StatusCodes.BadRequest)
