@@ -6,9 +6,10 @@ import akka.cluster.ddata.SelfUniqueAddress
 import akka.persistence.typed.PersistenceId
 import akka.persistence.typed.scaladsl.{Effect, EventSourcedBehavior, RetentionCriteria}
 import microservice.CborSerializable
+import microservice.actors.StockActor
 
 
-object OrderRequest {
+object OrderActor {
 
   def apply(orderId: OrderId, persistenceId: PersistenceId)(implicit node: SelfUniqueAddress): Behavior[Command] = Behaviors.setup { context =>
 
@@ -33,9 +34,35 @@ object OrderRequest {
             }
           case FindOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
-              context.log.info("Cannot find the order.".format(orderId.id))
+              context.log.info("Cannot find the order in empty process.".format(orderId.id))
               replyTo ! Failed("Cannot find the order")
             }.thenStop()
+          case GetPaymentStatus(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in empty process.".format(orderId.id))
+              replyTo ! PaymentStatus(Status(false))
+            }.thenStop()
+          case CancelPayment(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in empty process.".format(orderId.id))
+              replyTo ! Failed("We have not paid yet.")
+            }.thenStop()
+          case RemoveOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove the order in empty process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove the order.")
+            }.thenStop()
+          case AddItemToOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot add an item to the order in empty process.".format(orderId.id))
+              replyTo ! Failed("Cannot add an item to the order.")
+            }.thenStop()
+          case RemoveItemFromOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove an item from the order in empty process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove an item from the order.")
+            }.thenStop()
+          case CheckoutOrderRequest(_, _) => Effect.none[Event, State]
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
@@ -61,7 +88,7 @@ object OrderRequest {
             Effect.persist(AddItemToOrderRequestReceived(itemId, replyTo)).thenRun { _ =>
               context.log.info("Request the price of item " + itemId + " by spawning a stock actor.".format(orderId.id))
               // Spawn a new stock actor, and send a message to the stock actor to obtain the stock price.
-              val stockActor = context.spawn(StockActor(itemId), "stock" + itemId)
+              val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
               stockActor ! StockActor.FindStock(stockAdapter)
             }
           // Remove an item from the order, and send the client a succeed or failed message.
@@ -94,7 +121,8 @@ object OrderRequest {
           case CheckoutOrderRequest(_, replyTo) =>
             Effect.persist(CheckOutOrderRequestReceived(replyTo)).thenRun { _ =>
               context.log.info("Checkout the order.".format(orderId.id))
-              val userActor = context.spawn(UserActor(process.order.userId), "userActor" + process.orderId.id)
+              val userActor = context.spawn(UserActor(process.order.userId),
+                "userActor-" + process.order.userId + "-" + orderId.id)
               userActor ! UserActor.SubtractCredit(process.order.totalCost, paymentAdapter)
             }
           // Obtain the payment status
@@ -119,9 +147,14 @@ object OrderRequest {
           case AdaptedPaymentResponse(_, UserActor.Successful()) =>
             Effect.persist[Event, State](PaymentProcessed(process.order.items.length)).thenRun { _ =>
               context.log.info("Receive a succeed message from the user that the payment is succeed.".format(orderId.id))
-              process.order.items.foreach { itemId =>
-                val stockActor = context.spawn(StockActor(itemId), "stock" + itemId)
-                stockActor ! StockActor.SubtractStock(1, stockAdapter)
+              // Check whether there are items in the order list of items
+              if (process.order.items.isEmpty) {
+                process.client ! Succeed
+              } else {
+                process.order.items.foreach { itemId =>
+                  val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
+                  stockActor ! StockActor.SubtractStock(1, stockAdapter)
+                }
               }
             }
           // The entity receives a response that the payment is failed, so it sends back a failed message to the client.
@@ -138,16 +171,35 @@ object OrderRequest {
           case AdaptedPaymentResponse(_, _) => Effect.unhandled
           case FindOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Find the order in payment process.".format(orderId.id))
               replyTo ! FindOrderResponse(process.order)
             }
           case GetPaymentStatus(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Get payment status in payment process.".format(orderId.id))
               replyTo ! PaymentStatus(Status(process.order.paid))
             }
           case CancelPayment(_, _, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in payment process.".format(orderId.id))
               replyTo ! Failed("We have not paid yet.")
             }
+          case RemoveOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove the order in payment process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove the order")
+            }
+          case AddItemToOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot add an item to the order in payment process.".format(orderId.id))
+              replyTo ! Failed("Cannot add an item to the order.")
+            }
+          case RemoveItemFromOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove an item from the order in payment process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove an item from the order.")
+            }
+          case CheckoutOrderRequest(_, _) => Effect.none[Event, State]
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
@@ -168,7 +220,7 @@ object OrderRequest {
                 } else if (succeedResponses.length + process.failedResponses.length == process.expectedResponses) {
                   // Entity does not receives all succeed message, so it rolls back the stock process
                   succeedResponses.foreach { itemId =>
-                    val stockActor = context.spawn(StockActor(itemId), "stock" + itemId)
+                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
                     stockActor ! StockActor.AddStock(1, stockAdapter)
                   }
                 }
@@ -185,11 +237,34 @@ object OrderRequest {
               if (process.succeedResponses.length + failedResponses.length == process.expectedResponses) {
                 if (process.succeedResponses.nonEmpty) {
                   process.succeedResponses.foreach { itemId =>
-                    val stockActor = context.spawn(StockActor(itemId), "stock" + itemId)
+                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
                     stockActor ! StockActor.AddStock(1, stockAdapter)
                   }
                 } else {
-                  val userActor = context.spawn(UserActor(process.order.userId), "userActor"  + process.orderId.id)
+                  val userActor = context.spawn(UserActor(process.order.userId),
+                    "userActor-" + process.order.userId + "-" + orderId.id)
+                  userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
+                }
+              }
+            }
+          case AdaptedStockResponse(_, StockActor.Failed(reason, itemId)) =>
+            val failedResponses = itemId :: process.failedResponses
+
+            Effect.persist[Event, State](StockProcessed(process.succeedResponses, failedResponses)).thenRun { _ =>
+              context.log.info("Cannot handle request since the stock fails to subtract item " + itemId + "from order "
+                .format(orderId.id))
+              process.client ! Failed(reason)
+            }.thenRun { _ =>
+              // Entity does not receives all succeed message, so it rolls back the stock process
+              if (process.succeedResponses.length + failedResponses.length == process.expectedResponses) {
+                if (process.succeedResponses.nonEmpty) {
+                  process.succeedResponses.foreach { itemId =>
+                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
+                    stockActor ! StockActor.AddStock(1, stockAdapter)
+                  }
+                } else {
+                  val userActor = context.spawn(UserActor(process.order.userId),
+                    "userActor-" + process.order.userId + "-" + orderId.id)
                   userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
                 }
               }
@@ -201,14 +276,32 @@ object OrderRequest {
             }
           case GetPaymentStatus(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Get payment status in stock process.".format(orderId.id))
               replyTo ! PaymentStatus(Status(process.order.paid))
             }
           case CancelPayment(_, _, replyTo) =>
             Effect.persist[Event, State](CancelPaymentProcessed(replyTo)).thenRun { _ =>
                 context.log.info("cancel the payment.".format(orderId.id))
-                val userActor = context.spawn(UserActor(process.order.userId), "userActor"  + process.orderId.id)
+                val userActor = context.spawn(UserActor(process.order.userId),
+                  "userActor-" + process.order.userId + "-" + orderId.id)
                 userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
             }
+          case RemoveOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove the order in stock process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove the order")
+            }
+          case AddItemToOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot add an item to the order in stock process.".format(orderId.id))
+              replyTo ! Failed("Cannot add an item to the order.")
+            }
+          case RemoveItemFromOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove an item from the order in stock process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove an item from the order.")
+            }
+          case CheckoutOrderRequest(_, _) => Effect.none[Event, State]
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
         }
@@ -216,31 +309,50 @@ object OrderRequest {
       // for items which where successful decremented.
       case process: RollBackStockProcess =>
         command match {
-          case AdaptedStockResponse(_, _ : StockActor.Successful) =>
+          case AdaptedStockResponse(_, _) =>
             val receivedResponses = process.receivedResponses + 1
-            Effect.persist[Event, State](RollBackStockProcessed(receivedResponses))
-              .thenRun { _ =>
+            Effect.persist[Event, State](RollBackStockProcessed(receivedResponses)).thenRun { _ =>
                 context.log.info("Receive a succeed message from the stock in the rollback process.".format(orderId.id))
                 if (process.expectedResponses == receivedResponses) {
-                  val userActor = context.spawn(UserActor(process.order.userId), "userActor"  + process.orderId.id)
+                  val userActor = context.spawn(UserActor(process.order.userId),
+                    "userActor-" + process.order.userId + "-" + orderId.id)
                   userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
                 }
               }
-          // The entity receives a failed message from the stock, so it sends again a message to the stock actor.
-          case AdaptedStockResponse(_, response: StockActor.Failed) =>
-            Effect.none[Event, State].thenRun { _ =>
-              context.log.info("Receive a failed message from the stock in the rollback process.".format(orderId.id))
-              val stockActor = context.spawn(StockActor(response.item_id), "stock" + response.item_id)
-              stockActor ! StockActor.AddStock(1, stockAdapter)
-            }
-          case AdaptedStockResponse(_, _) => Effect.unhandled
           case FindOrderRequest(_, replyTo) =>
+            context.log.info("Find order in rollback stock process.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
           case GetPaymentStatus(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Get payment status in rollback stock process.".format(orderId.id))
               replyTo ! PaymentStatus(Status(process.order.paid))
+            }
+          case CancelPayment(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in payment process.".format(orderId.id))
+              replyTo ! Failed("We have not paid yet.")
+            }
+          case RemoveOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove the order in rollback stock process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove the order.")
+            }
+          case AddItemToOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot add an item to the order in rollback stock process.".format(orderId.id))
+              replyTo ! Failed("Cannot add an item to the order.")
+            }
+          case RemoveItemFromOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove an item from the order in rollback stock process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove an item from the order.")
+            }
+          case CheckoutOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Checkout the order in rollback stock process.".format(orderId.id))
+              replyTo ! Failed("Checkout the order.")
             }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
@@ -249,25 +361,44 @@ object OrderRequest {
       // the user's credit.
       case process: RollBackPaymentProcess =>
         command match {
-          case AdaptedPaymentResponse(_, UserActor.Successful()) =>
+          case AdaptedPaymentResponse(_, _) =>
             Effect.persist[Event, State](RollBackPaymentProcessed).thenRun { _ =>
               context.log.info("Receive a succeed message from the user payment is correctly changed.".format(orderId.id))
             }
-          // The entity receives a response that the payment is failed, so it sends again a message to the user actor.
-          case AdaptedPaymentResponse(_, UserActor.Failed(reason)) =>
-            Effect.none[Event, State].thenRun { _ =>
-              context.log.info("Receive a failed message from the user. Payment cannot be changed.".format(orderId.id))
-              val userActor = context.spawn(UserActor(process.order.userId), "userActor")
-              userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
-            }
-          case AdaptedPaymentResponse(_, _) => Effect.unhandled
           case FindOrderRequest(_, replyTo) =>
+            context.log.info("Find order in rollback payment process.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
           case GetPaymentStatus(_, replyTo) =>
+            context.log.info("Get payment status in rollback payment process.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! PaymentStatus(Status(process.order.paid))
+            }
+          case CancelPayment(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in rollback payment process.".format(orderId.id))
+              replyTo ! Failed("We have not paid yet.")
+            }
+          case RemoveOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove the order in rollback payment process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove the order")
+            }
+          case AddItemToOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot add an item to the order in rollback payment process.".format(orderId.id))
+              replyTo ! Failed("Cannot add an item to the order.")
+            }
+          case RemoveItemFromOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove an item from the order in rollback payment process.".format(orderId.id))
+              replyTo ! Failed("Cannot remove an item from the order.")
+            }
+          case CheckoutOrderRequest(_, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Checkout the order in rollback payment process.".format(orderId.id))
+              replyTo ! Failed("Checkout the order.")
             }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
@@ -276,20 +407,39 @@ object OrderRequest {
       case process: OrderProcessed =>
         command match {
           case CheckoutOrderRequest(_, replyTo) =>
+            context.log.info("Checkout order in order processed.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! Succeed
             }
           case FindOrderRequest(_, replyTo) =>
+            context.log.info("Find order in order processed.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
           case RemoveOrderRequest(_, replyTo) =>
+            context.log.info("Remove order in order processed.".format(orderId.id))
             Effect.persist[Event, State](RemoveOrderRequestReceived).thenRun { _ =>
               replyTo ! Succeed
             }.thenStop()
           case GetPaymentStatus(_, replyTo) =>
+            context.log.info("Get payment status of order in order processed.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! PaymentStatus(Status(process.order.paid))
+            }
+          case CancelPayment(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cancel the payment in order processed.".format(orderId.id))
+              replyTo ! Failed("We have already paid, which you cannot cancel.")
+            }
+          case AddItemToOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot add an item to the order in order processed.".format(orderId.id))
+              replyTo ! Failed("Cannot add an item to the order.")
+            }
+          case RemoveItemFromOrderRequest(_, _, replyTo) =>
+            Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Cannot remove an item from the order in order processed.".format(orderId.id))
+              replyTo ! Failed("Cannot remove an item from the order.")
             }
           case GracefulStop => Effect.stop[Event, State]
           case _ => Effect.unhandled
@@ -308,19 +458,15 @@ object OrderRequest {
       case process: OrderProcess =>
         event match {
           case RemoveOrderRequestReceived => Empty
-          case AddItemToOrderRequestReceived(itemId, replyTo) =>
-            val order = Order(process.orderId, process.order.userId, itemId ::process.order.items,
-              process.order.totalCost, process.order.paid)
-            OrderProcess(process.orderId, order, process.items.updated(itemId, 0), replyTo)
+          case AddItemToOrderRequestReceived(_, replyTo) =>
+            OrderProcess(process.orderId, process.order, process.items, replyTo)
           case ItemRemovedFromOrder(itemId) =>
             val nItemWithItemId = process.order.items.count(_ == itemId)
-            val order = Order(process.orderId, process.order.userId,
-              process.order.items.filter(_ != itemId),
-              process.order.totalCost - (nItemWithItemId * process.items(itemId)),
-              process.order.paid)
+            val order = Order(process.orderId, process.order.userId, process.order.items.filter(_ != itemId),
+              process.order.totalCost - (nItemWithItemId * process.items(itemId)), process.order.paid)
             OrderProcess(process.orderId, order, process.items - itemId, process.client)
           case ItemAddedToOrder(itemId, price) =>
-            val order = Order(process.orderId, process.order.userId, process.order.items,
+            val order = Order(process.orderId, process.order.userId, itemId ::process.order.items,
               process.order.totalCost + price, process.order.paid)
             OrderProcess(process.orderId, order, process.items.updated(itemId, price), process.client)
           case CheckOutOrderRequestReceived(replyTo) =>
@@ -330,8 +476,13 @@ object OrderRequest {
 
       case process: PaymentProcess =>
         event match {
-          case PaymentProcessed(expectedResponses) =>
-            StockProcess(process.orderId, process.order, expectedResponses, List(), List(), process.items, process.client)
+          case PaymentProcessed(expectedResponses) => expectedResponses match {
+            case 0 =>
+              val order = Order(process.orderId, process.order.userId, process.order.items, process.order.totalCost,
+                true: Boolean)
+              OrderProcessed(process.orderId, order)
+            case _ => StockProcess(process.orderId, process.order, expectedResponses, List(), List(), process.items, process.client)
+          }
           case BackToOrderProcess =>
             OrderProcess(process.orderId, process.order, process.items, process.client)
           case _ => state
@@ -362,33 +513,34 @@ object OrderRequest {
 
       case process: RollBackStockProcess =>
         event match {
-          case RollBackStockProcessed(receivedResponses) =>
-            if (receivedResponses == process.expectedResponses) {
-              RollBackPaymentProcess(process.orderId, process.order, process.items, process.client)
-            } else {
-              RollBackStockProcess(process.orderId, process.order, process.expectedResponses, receivedResponses,
-                process.items, process.client)
-            }
+          case RollBackStockProcessed(receivedResponses) => receivedResponses match {
+            case process.expectedResponses => RollBackPaymentProcess(process.orderId, process.order, process.items, process.client)
+            case _ => RollBackStockProcess(process.orderId, process.order, process.expectedResponses, receivedResponses, process.items, process.client)
+          }
           case _ => process
         }
 
       case process: RollBackPaymentProcess =>
         event match {
           case RollBackPaymentProcessed =>
-            val order = Order(process.orderId, process.order.userId, process.order.items, process.order.totalCost,
-              false: Boolean)
+            val order = Order(process.orderId, process.order.userId, process.order.items, process.order.totalCost, false: Boolean)
             OrderProcess(process.orderId, order, process.items, process.client)
           case _ => process
         }
 
-      case processed: OrderProcessed => processed
+      case processed: OrderProcessed =>
+        event match {
+          case RemoveOrderRequestReceived => Empty
+          case _ => processed
+        }
+
     }
 
     EventSourcedBehavior[Command, Event, State](
       persistenceId = persistenceId,
       emptyState = Empty,
       commandHandler = commandHandler,
-      eventHandler = eventHandler).withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 100, keepNSnapshots = 3))
+      eventHandler = eventHandler).withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 3, keepNSnapshots = 3))
 
   }
   // public protocol
