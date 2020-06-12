@@ -64,10 +64,6 @@ object StockActor {
           replyTo ! Failed("Couldn't find " + DataKey, item_id)
           Behaviors.stopped
 
-        case InternalFindResponse(replyTo, e) =>
-          replyTo ! Failed("Couldn't find " + e, item_id)
-          Behaviors.stopped
-
         case InternalFindResponse(replyTo, GetFailure(DataKey, _)) =>
           // ReadMajority failure, try again with local read
           replicator.askGet(
@@ -75,6 +71,10 @@ object StockActor {
             rsp => InternalFindResponse(replyTo, rsp))
 
           Behaviors.same
+
+        case InternalFindResponse(replyTo, e) =>
+          replyTo ! Failed("Couldn't find " + e, item_id)
+          Behaviors.stopped
       }
 
       def receiveSubtractStock: PartialFunction[Command, Behavior[Command]] = {
