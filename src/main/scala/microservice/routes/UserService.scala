@@ -57,7 +57,7 @@ class UserService(implicit val system: ActorSystem[_], implicit val ct: ActorCon
             }
           }
         },
-        pathPrefix("get" / JavaUUID) { id =>
+        pathPrefix("find" / JavaUUID) { id =>
           get {
             val actor = ct.spawn(UserActor(id.toString), "user-"+id)
             val res = actor.ask(UserActor.FindUser)
