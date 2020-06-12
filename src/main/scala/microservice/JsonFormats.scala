@@ -1,7 +1,7 @@
 package microservice
 
 import akka.http.scaladsl.marshallers.sprayjson.SprayJsonSupport
-import microservice.actors.OrderRequest.{Order, OrderId, Status, Success}
+import microservice.actors.OrderRequest.{Order, OrderId, Status}
 import spray.json.{DefaultJsonProtocol, DeserializationException, JsArray, JsBoolean, JsNumber, JsObject, JsString, JsValue, RootJsonFormat}
 
 trait JsonFormats extends DefaultJsonProtocol with SprayJsonSupport {

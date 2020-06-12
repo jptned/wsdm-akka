@@ -28,7 +28,7 @@ object OrderRequest {
             Effect
               .persist[Event, State](CreateOrderRequestReceived(id, userId, replyTo)).thenRun { _ =>
               context.log.info("Create a new order.".format(orderId.id))
-              replyTo ! OrderCreatedResponse(id)
+//              replyTo ! OrderCreatedResponse(id)
             }
           case FindOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
@@ -48,7 +48,7 @@ object OrderRequest {
           case RemoveOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
               context.log.info("Cannot remove the order in empty process.".format(orderId.id))
-              replyTo ! Failed("Cannot remove the order")
+              replyTo ! Failed("Cannot remove the order.")
             }.thenStop()
           case AddItemToOrderRequest(_, _, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
@@ -250,6 +250,7 @@ object OrderRequest {
             }
           case GetPaymentStatus(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Get payment status in stock process.".format(orderId.id))
               replyTo ! PaymentStatus(Status(process.order.paid))
             }
           case CancelPayment(_, _, replyTo) =>
@@ -292,11 +293,13 @@ object OrderRequest {
                 }
               }
           case FindOrderRequest(_, replyTo) =>
+            context.log.info("Find order in rollback stock process.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
           case GetPaymentStatus(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
+              context.log.info("Get payment status in rollback stock process.".format(orderId.id))
               replyTo ! PaymentStatus(Status(process.order.paid))
             }
           case CancelPayment(_, _, replyTo) =>
@@ -307,7 +310,7 @@ object OrderRequest {
           case RemoveOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
               context.log.info("Cannot remove the order in rollback stock process.".format(orderId.id))
-              replyTo ! Failed("Cannot remove the order")
+              replyTo ! Failed("Cannot remove the order.")
             }
           case AddItemToOrderRequest(_, _, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
@@ -336,10 +339,12 @@ object OrderRequest {
               context.log.info("Receive a succeed message from the user payment is correctly changed.".format(orderId.id))
             }
           case FindOrderRequest(_, replyTo) =>
+            context.log.info("Find order in rollback payment process.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
           case GetPaymentStatus(_, replyTo) =>
+            context.log.info("Get payment status in rollback payment process.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! PaymentStatus(Status(process.order.paid))
             }
@@ -375,18 +380,22 @@ object OrderRequest {
       case process: OrderProcessed =>
         command match {
           case CheckoutOrderRequest(_, replyTo) =>
+            context.log.info("Checkout order in order processed.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! Succeed
             }
           case FindOrderRequest(_, replyTo) =>
+            context.log.info("Find order in order processed.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! FindOrderResponse(process.order)
             }
           case RemoveOrderRequest(_, replyTo) =>
+            context.log.info("Remove order in order processed.".format(orderId.id))
             Effect.persist[Event, State](RemoveOrderRequestReceived).thenRun { _ =>
               replyTo ! Succeed
             }.thenStop()
           case GetPaymentStatus(_, replyTo) =>
+            context.log.info("Get payment status of order in order processed.".format(orderId.id))
             Effect.none[Event, State].thenRun { _ =>
               replyTo ! PaymentStatus(Status(process.order.paid))
             }
@@ -422,17 +431,15 @@ object OrderRequest {
       case process: OrderProcess =>
         event match {
           case RemoveOrderRequestReceived => Empty
-          case AddItemToOrderRequestReceived(itemId, replyTo) =>
-            val order = Order(process.orderId, process.order.userId, itemId ::process.order.items,
-              process.order.totalCost, process.order.paid)
-            OrderProcess(process.orderId, order, process.items.updated(itemId, 0), replyTo)
+          case AddItemToOrderRequestReceived(_, replyTo) =>
+            OrderProcess(process.orderId, process.order, process.items, replyTo)
           case ItemRemovedFromOrder(itemId) =>
             val nItemWithItemId = process.order.items.count(_ == itemId)
             val order = Order(process.orderId, process.order.userId, process.order.items.filter(_ != itemId),
               process.order.totalCost - (nItemWithItemId * process.items(itemId)), process.order.paid)
             OrderProcess(process.orderId, order, process.items - itemId, process.client)
           case ItemAddedToOrder(itemId, price) =>
-            val order = Order(process.orderId, process.order.userId, process.order.items,
+            val order = Order(process.orderId, process.order.userId, itemId ::process.order.items,
               process.order.totalCost + price, process.order.paid)
             OrderProcess(process.orderId, order, process.items.updated(itemId, price), process.client)
           case CheckOutOrderRequestReceived(replyTo) =>
@@ -506,7 +513,7 @@ object OrderRequest {
       persistenceId = persistenceId,
       emptyState = Empty,
       commandHandler = commandHandler,
-      eventHandler = eventHandler).withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 100, keepNSnapshots = 3))
+      eventHandler = eventHandler).withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 3, keepNSnapshots = 3))
 
   }
   // public protocol
