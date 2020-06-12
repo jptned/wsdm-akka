@@ -28,7 +28,7 @@ object OrderRequest {
             Effect
               .persist[Event, State](CreateOrderRequestReceived(id, userId, replyTo)).thenRun { _ =>
               context.log.info("Create a new order.".format(orderId.id))
-//              replyTo ! OrderCreatedResponse(id)
+              replyTo ! OrderCreatedResponse(id)
             }
           case FindOrderRequest(_, replyTo) =>
             Effect.none[Event, State].thenRun { _ =>
@@ -229,6 +229,27 @@ object OrderRequest {
               context.log.info("Cannot handle request since the stock fails to subtract item " + itemId + "from order "
                 .format(orderId.id))
               process.client ! Failed("The stock has not enough items available for item " + itemId + ".")
+            }.thenRun { _ =>
+              // Entity does not receives all succeed message, so it rolls back the stock process
+              if (process.succeedResponses.length + failedResponses.length == process.expectedResponses) {
+                if (process.succeedResponses.nonEmpty) {
+                  process.succeedResponses.foreach { itemId =>
+                    val stockActor = context.spawn(Stock(itemId), "stock" + itemId)
+                    stockActor ! Stock.AddStock(1, stockAdapter)
+                  }
+                } else {
+                  val userActor = context.spawn(UserActor(process.order.userId), "userActor"  + process.orderId.id)
+                  userActor ! UserActor.AddCredit(process.order.totalCost, paymentAdapter)
+                }
+              }
+            }
+          case AdaptedStockResponse(_, Stock.Failed(reason, itemId)) =>
+            val failedResponses = itemId :: process.failedResponses
+
+            Effect.persist[Event, State](StockProcessed(process.succeedResponses, failedResponses)).thenRun { _ =>
+              context.log.info("Cannot handle request since the stock fails to subtract item " + itemId + "from order "
+                .format(orderId.id))
+              process.client ! Failed(reason)
             }.thenRun { _ =>
               // Entity does not receives all succeed message, so it rolls back the stock process
               if (process.succeedResponses.length + failedResponses.length == process.expectedResponses) {

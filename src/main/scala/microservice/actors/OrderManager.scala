@@ -39,7 +39,6 @@ object OrderManager {
         case CreateOrder(userId, sender) =>
           val orderId = OrderId(UUID.randomUUID().toString)
           shardRegion ! OrderRequest.CreateOrderRequest(orderId, userId, sender)
-          sender ! OrderRequest.OrderCreatedResponse(orderId)
           Behaviors.same
         case RemoveOrder(orderId, sender) =>
           shardRegion ! OrderRequest.RemoveOrderRequest(orderId, sender)
