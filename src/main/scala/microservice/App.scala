@@ -15,6 +15,8 @@ import microservice.actors.OrderManager
 import microservice.routes.{OrderRoutes, PaymentRoutes, StockService, UserService}
 
 import scala.concurrent.ExecutionContextExecutor
+import scala.concurrent.duration._
+import akka.util.Timeout
 
 object App extends App {
 
@@ -25,6 +27,7 @@ object App extends App {
     implicit val classicSystem: classic.ActorSystem = system.toClassic
     implicit val ec: ExecutionContextExecutor = context.system.executionContext
     implicit val materializer: Materializer = Materializer(context.system.toClassic)
+    implicit val timeout = Timeout(20.seconds)
 
     val cluster = Cluster(context.system)
     context.log.info("Started [" + context.system + "], cluster.selfAddress = " + cluster.selfMember.address + ")")
@@ -34,8 +37,8 @@ object App extends App {
     val stockservice: StockService = new StockService()
 
     val buildOrderManager = context.spawn(OrderManager(), "OrderManager")
-    val orderRoutes = new OrderRoutes(buildOrderManager)(context.system)
-    val paymentRoutes = new PaymentRoutes(buildOrderManager)(context.system)
+    val orderRoutes = new OrderRoutes(buildOrderManager)
+    val paymentRoutes = new PaymentRoutes(buildOrderManager)
 
     Http().bindAndHandle(concat(
       userservice.userRoutes,

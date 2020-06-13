@@ -18,9 +18,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration._
 
 
-class UserService(implicit val system: ActorSystem[_], implicit val ct: ActorContext[Nothing], implicit val node: SelfUniqueAddress) {
-  implicit val timeout: Timeout = Timeout(5000.millis)
-
+class UserService(implicit val system: ActorSystem[_], implicit val ct: ActorContext[Nothing], implicit val node: SelfUniqueAddress, implicit val timeout: Timeout) {
   val userRoutes: Route =
     pathPrefix("users") {
       concat(

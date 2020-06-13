@@ -548,7 +548,7 @@ object OrderActor {
       persistenceId = persistenceId,
       emptyState = Empty,
       commandHandler = commandHandler,
-      eventHandler = eventHandler).withRetention(RetentionCriteria.snapshotEvery(numberOfEvents = 3, keepNSnapshots = 3))
+      eventHandler = eventHandler)
 
   }
   // public protocol

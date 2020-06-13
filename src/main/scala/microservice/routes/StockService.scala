@@ -17,9 +17,7 @@ import play.api.libs.json.Json
 import scala.concurrent.Future
 import scala.concurrent.duration._
 
-class StockService(implicit system: ActorSystem[_], implicit val ct: ActorContext[Nothing], implicit val node: SelfUniqueAddress) {
-  implicit val timeout: Timeout = Timeout(5000.millis)
-
+class StockService(implicit system: ActorSystem[_], implicit val ct: ActorContext[Nothing], implicit val node: SelfUniqueAddress, implicit val timeout: Timeout) {
   val stockRoutes: Route =
     pathPrefix("stock") {
       concat(
