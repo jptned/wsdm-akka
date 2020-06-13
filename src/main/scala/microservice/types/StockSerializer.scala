@@ -24,7 +24,7 @@ class StockSerializer(val system: ExtendedActorSystem) extends Serializer with S
     bb.array() ++ new ReplicatedDataSerializer(system).pncounterToProto(stock.stock).toByteArray
   }
 
-  override def includeManifest: Boolean = true
+  override def includeManifest: Boolean = false
 
   override def fromBinary(bytes: Array[Byte], manifest: Option[Class[_]]): AnyRef = {
     val bb = ByteBuffer.wrap(bytes)

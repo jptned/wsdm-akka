@@ -1,6 +1,6 @@
 package microservice.types
 
-import akka.cluster.ddata.{Key, PNCounter, ReplicatedData, ReplicatedDataSerialization, SelfUniqueAddress}
+import akka.cluster.ddata._
 
 object StockType {
   def create(item_id: String, price: Long): StockType = new StockType(item_id, PNCounter.empty, price)
@@ -9,7 +9,8 @@ object StockType {
 final case class NotEnoughStockException(private val message: String = "",
                                          private val cause: Throwable = None.orNull) extends Exception(message, cause)
 
-final class StockType(val item_id: String, val stock: PNCounter, val price: Long) extends ReplicatedData {
+@SerialVersionUID(1L)
+final class StockType(val item_id: String, val stock: PNCounter, val price: Long) extends ReplicatedData with ReplicatedDataSerialization {
   override type T = StockType
 
   def increment(n: Long)(implicit node: SelfUniqueAddress): StockType = {
