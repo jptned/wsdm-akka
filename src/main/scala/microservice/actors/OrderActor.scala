@@ -151,8 +151,10 @@ object OrderActor {
               if (process.order.items.isEmpty) {
                 process.client ! Succeed
               } else {
+                var c : Int = 0
                 process.order.items.foreach { itemId =>
-                  val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
+                  val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id + "-" + c)
+                  c+=1
                   stockActor ! StockActor.SubtractStock(1, stockAdapter)
                 }
               }
@@ -219,8 +221,10 @@ object OrderActor {
                   process.client ! Succeed
                 } else if (succeedResponses.length + process.failedResponses.length == process.expectedResponses) {
                   // Entity does not receives all succeed message, so it rolls back the stock process
+                  var c = 0
                   succeedResponses.foreach { itemId =>
-                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
+                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id + "-" + c)
+                    c+=1
                     stockActor ! StockActor.AddStock(1, stockAdapter)
                   }
                 }
@@ -236,8 +240,10 @@ object OrderActor {
               // Entity does not receives all succeed message, so it rolls back the stock process
               if (process.succeedResponses.length + failedResponses.length == process.expectedResponses) {
                 if (process.succeedResponses.nonEmpty) {
+                  var c = 0
                   process.succeedResponses.foreach { itemId =>
-                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
+                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id + "-" + c)
+                    c += 1
                     stockActor ! StockActor.AddStock(1, stockAdapter)
                   }
                 } else {
@@ -258,8 +264,10 @@ object OrderActor {
               // Entity does not receives all succeed message, so it rolls back the stock process
               if (process.succeedResponses.length + failedResponses.length == process.expectedResponses) {
                 if (process.succeedResponses.nonEmpty) {
+                  var c = 0
                   process.succeedResponses.foreach { itemId =>
-                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id)
+                    val stockActor = context.spawn(StockActor(itemId), "stockActor-" + itemId + "-" + orderId.id + "-" + c)
+                    c += 1
                     stockActor ! StockActor.AddStock(1, stockAdapter)
                   }
                 } else {

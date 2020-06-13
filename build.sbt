@@ -1,6 +1,6 @@
 name := "wsdm-akka"
 
-version := "1.5"
+version := "1.5.1"
 
 scalaVersion := "2.13.1"
 

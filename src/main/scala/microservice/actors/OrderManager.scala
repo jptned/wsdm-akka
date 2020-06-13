@@ -19,7 +19,7 @@ object OrderManager {
 
       // define a message extractor that knows how to retrieve the entityId from a message
       val messageExtractor =
-      new HashCodeNoEnvelopeMessageExtractor[OrderActor.Command](numberOfShards = 100) {
+      new HashCodeNoEnvelopeMessageExtractor[OrderActor.Command](numberOfShards = 1000) {
         override def entityId(message: OrderActor.Command): String = message.orderId.id
       }
 
